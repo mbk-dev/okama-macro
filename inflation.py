@@ -29,7 +29,7 @@ def get_annual_inflation() -> pd.Series:
 
     Inflation is calculated from CPI ('A01010201' code - same month of last year=100).
     """
-    s_old = request_data.load_nbs_web(series='A01010201', periods='2001-2022', freq='month')
+    s_old = request_data.load_nbs_web(series='A01010201', periods='1987-2015', freq='month')
     s_old = s_old[s_old != 0]
     return s_old - 100.
 
