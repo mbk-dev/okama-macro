@@ -1,4 +1,5 @@
 import pandas as pd
+
 from nbsc import request_data
 
 today_year = pd.Timestamp.today().strftime('%Y')
@@ -39,14 +40,19 @@ def get_annual_inflation() -> pd.Series:
     return (s_old - 100.) / 100
 
 
-def calculate_monthly_from_annual():
+def calculate_monthly_from_annual(last_date: str = "2000-12") -> pd.Series:
     """
-    Calculate monthly inflation (1987 - 2000) from annual and monthly data.
+    Calculate monthly inflation (1987+) given annual and monthly data.
+
+    This function is used for periods where no official monthly CPI data is available.
+    last_date should be 2000-12 or later.
     """
     s_annual = get_annual_inflation()
     s_monthly = get_inflation_from_2001()
-    new_index = pd.period_range('1987-01', '2000-12', freq='M').sort_values(ascending=False)
+    if pd.to_datetime(last_date, format='%Y-%m') < pd.to_datetime("2000-12", format='%Y-%m'):
+        raise ValueError("last_date should be 2000-12 or later.")
+    new_index = pd.period_range('1987-01', last_date, freq='M').sort_values(ascending=False)
     for date in new_index:
-        prod_monthly = (s_monthly.tail(11) + 1.).prod()
+        prod_monthly = (s_monthly[:date + 1].tail(11) + 1.).prod()
         s_monthly[date] = (s_annual.shift(11)[date] + 1.) / prod_monthly - 1.
-    return s_monthly
+    return s_monthly.sort_index(ascending=True)[:last_date]

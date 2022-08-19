@@ -4,4 +4,4 @@ from nbsc.inflation import get_inflation_from_2001, get_recent_inflation, get_an
     calculate_monthly_from_annual
 from nbsc.request_data import load_nbs_web
 
-__version__ = version("nbsc")
+# __version__ = version("nbsc")
