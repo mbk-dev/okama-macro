@@ -16,7 +16,7 @@ def get_inflation_from_2001() -> pd.Series:
         series="A01030201", periods="2001-2015", freq="month"
     )
     s = pd.concat([s_2016, s_2001], axis=0, join="outer", copy="false")
-    check_for_zero(s)
+    s = check_for_zero(s)
     s = (s - 100.0) / 100
     s.index = s.index.to_period("M")
     return s.sort_index(ascending=False)
