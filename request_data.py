@@ -10,7 +10,8 @@ from requests.adapters import HTTPAdapter
 
 requests.packages.urllib3.disable_warnings()
 
-BASE_URL = 'http://data.stats.gov.cn/english/easyquery.htm'
+BASE_URL_ENG = "http://data.stats.gov.cn/english/easyquery.htm"
+BASE_URL_CN = "http://data.stats.gov.cn/easyquery.htm"
 default_timeout = 10  # seconds
 
 
@@ -47,59 +48,65 @@ def load_nbs_web(series: str, periods: str, freq: str):
     # Parameters for constructing the query string
     params = {
         # Method of easyquery.htm to call
-        'm': 'QueryData',
+        "m": "QueryData",
         # Periods are always one dimension of the returned data
-        'colcode': 'sj',
+        "colcode": "sj",
         # Timestamp
-        'k1': int(datetime.now().timestamp() * 1000),
-        }
+        "k1": int(datetime.now().timestamp() * 1000),
+    }
 
     # Wrap series and periods in the form expected by the query string
-    _series = {'wdcode': 'zb', 'valuecode': series}
-    _periods = {'wdcode': 'sj', 'valuecode': periods}
+    _series = {"wdcode": "zb", "valuecode": series}
+    _periods = {"wdcode": "sj", "valuecode": periods}
 
-    params['dbcode'] = 'hgyd' if freq == "month" else "hgnd"
-    params['rowcode'] = 'zb'
+    params["dbcode"] = "hgyd" if freq == "month" else "hgnd"
+    params["rowcode"] = "zb"
     # Two dimensional data: leave this blank
     wds = []
     # Select both series and periods
     dfwds = [_series, _periods]
 
     # Convert the wds and dfwds parameters to stringified JSON
-    seps = (',', ':')
-    params['wds'] = json.dumps(wds, separators=seps)
-    params['dfwds'] = json.dumps(dfwds, separators=seps)
+    seps = (",", ":")
+    params["wds"] = json.dumps(wds, separators=seps)
+    params["dfwds"] = json.dumps(dfwds, separators=seps)
 
     # Prepare the HTTP request
     session = requests.session()
-    retry_strategy = Retry(total=3, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504])
+    retry_strategy = Retry(
+        total=3, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504]
+    )
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
 
     try:
-        r = session.get(BASE_URL, params=params, verify=False, timeout=default_timeout)
+        r = session.get(
+            BASE_URL_ENG, params=params, verify=False, timeout=default_timeout
+        )
         r.raise_for_status()
     except requests.exceptions.HTTPError as err:
         raise requests.exceptions.HTTPError(
             f"HTTP error fetching data for {series}:",
             r.status_code,
             r.reason,
-            BASE_URL,
+            BASE_URL_ENG,
         ) from err
     response = r.json()
-    if response['returncode'] == 501:
-        raise requests.exceptions.HTTPError(f"{series} is not found in the database.", 501)
+    if response["returncode"] == 501:
+        raise requests.exceptions.HTTPError(
+            f"{series} is not found in the database.", 501
+        )
 
     return get_monthly_series(response, freq)
 
 
-def get_monthly_series(json_data: list, freq: str = 'month') -> pd.Series:
-    data_format = '%Y%m' if freq == 'month' else '%Y'
-    data = json_data['returndata']['datanodes']
-    s = pd.Series(dtype='float')
+def get_monthly_series(json_data: list, freq: str = "month") -> pd.Series:
+    data_format = "%Y%m" if freq == "month" else "%Y"
+    data = json_data["returndata"]["datanodes"]
+    s = pd.Series(dtype="float")
     for row in data:
-        value = row['data']['data']
-        date = pd.to_datetime(row['wds'][1]['valuecode'], format=data_format)
+        value = row["data"]["data"]
+        date = pd.to_datetime(row["wds"][1]["valuecode"], format=data_format)
         s[date] = value
     return s
