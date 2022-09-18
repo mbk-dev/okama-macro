@@ -77,7 +77,7 @@ def load_nbs_web(series: str, periods: str, freq: str):
         total=3, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504]
     )
     adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("https://", adapter)
+    # session.mount("https://", adapter)
     session.mount("http://", adapter)
 
     try:
