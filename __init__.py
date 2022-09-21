@@ -6,6 +6,11 @@ from nbsc.inflation import (
     get_annual_inflation,
     calculate_monthly_from_annual,
 )
+from nbsc.gdp import (
+    get_gdp,
+    get_per_cap_gdp,
+    get_gni,
+)
 from nbsc.request_data import load_nbs_web
 
 # __version__ = version("nbsc")
