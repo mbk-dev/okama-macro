@@ -26,15 +26,23 @@ def get_recent_inflation(first_year: str = "2016") -> pd.Series:
     """
     Request monthly inflation time series (2016+).
     """
-    s_2016 = request_data.load_nbs_web(
-        series="A01030101", periods=f"{first_year}-{today_year}", freq="month"
+    # for 2016-2020
+    s_2016 = request_data.load_nbs_web( 
+        series="A01030101", periods=f"{first_year}-{2020}", freq="month"
     )
-    s_2016.index = s_2016.index.to_period("M")
-    s_2016.sort_index(ascending=False, inplace=True)
-    s_2016 = check_for_zero(s_2016)
-    return (s_2016 - 100.0) / 100
+    # for 2021- ...
+    s_2021 = request_data.load_nbs_web( 
+        series="A01030G01", periods=f"{2021}-{today_year}", freq="month"
+    )    
+    
+    s = pd.concat([s_2016, s_2021], axis=0, join="outer", copy="false")
+    
+    s.index = s.index.to_period("M")
+    s.sort_index(ascending=False, inplace=True)
+    s = check_for_zero(s)
+    return (s - 100.0) / 100
 
-
+		
 def get_annual_inflation(first_year: str = "1987") -> pd.Series:
     """
     Request annual inflation monthly time series.
