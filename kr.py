@@ -13,7 +13,6 @@ def get_ir(date_start: str = "1900-1-1",
                                   series_code='MNT_RIB_BOI_D.D.RIB_BOI',
                                   date_start=date_start,
                                   date_end=date_end,
-                                  freq='D')                                                                                       
-    s.rename(columns={s.columns[0]: "key_rate"}, inplace=True)
-    s = pd.to_numeric(s.iloc[:, 0], errors='coerce') / 100
-    return s
+                                  freq='D')
+    s.rename("key_rate", inplace=True)
+    return s / 100
