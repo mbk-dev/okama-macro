@@ -50,15 +50,31 @@ def get_annual_inflation(first_year: str = "1987") -> pd.Series:
     2000-10    0.0
     2000-09    0.0
     """
-    s_new = request_data.load_nbs_web(
-        series="A01010101", periods=f"2016-{today_year}", freq="month"
-    )
-    if int(first_year) <= 2015:
-        s_old = request_data.load_nbs_web(
-            series="A01010201", periods=f"{first_year}-2015", freq="month"
-        )
+    if int(first_year) >= 2021:
+        s_new = request_data.load_nbs_web(
+            series="A01010G01", periods=f"{first_year}-{today_year}", freq="month")
+    else:
+        s_new = request_data.load_nbs_web(
+            series="A01010G01", periods=f"2021-{today_year}", freq="month")        
+    
+    if int(first_year) <= 2020:
+        if int(first_year) <= 2015:
+            s_old_1 = request_data.load_nbs_web(
+                series="A01010201", periods=f"{first_year}-2015", freq="month")
+        else:
+            s_old_1 = pd.Series()
+        
+        if int(first_year) <= 2020:
+            start_year = max(int(first_year), 2016)  
+            s_old_2 = request_data.load_nbs_web(
+                series="A01010101", periods=f"{start_year}-2020", freq="month")
+        else:
+            s_old_2 = pd.Series()
+            
+        s_old = pd.concat([s_old_1, s_old_2], axis=0)
     else:
         s_old = pd.Series()
+        
     s = pd.concat([s_old, s_new], axis=0, join="outer", copy="false")
     s.index = s.index.to_period("M")
     s.sort_index(ascending=False, inplace=True)
