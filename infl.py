@@ -26,7 +26,6 @@ def get_cpi(date_start: str = "1951-10-01",
         date_start=date_start,
         date_end=date_end,
         freq='M')
-    print(df)
     s = df.iloc[:, 0]  # first column has values
     s.rename("CPI_2020", inplace=True)
     return s
