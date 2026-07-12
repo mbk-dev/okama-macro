@@ -46,7 +46,11 @@ def get(url: str,
         use_proxy: bool = False,
         redact: tuple[str, ...] = (),
         label: str = 'request') -> requests.Response:
-    """GET ``url`` with UA/proxy defaults and linear-back-off retries on 5xx."""
+    """GET ``url`` with UA/proxy defaults and linear-back-off retries on 5xx.
+
+    Caller-supplied ``headers`` are merged over the defaults, so an explicit
+    ``User-Agent`` from the caller wins.
+    """
     merged_headers = {'User-Agent': USER_AGENT} | (headers or {})
     proxies = proxies_from_env() if use_proxy else None
     for attempt in range(max_attempts):

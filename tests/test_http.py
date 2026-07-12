@@ -42,6 +42,20 @@ def test_sends_browser_user_agent_and_merges_headers(monkeypatch):
     assert captured['proxies'] is None  # use_proxy=False by default
 
 
+def test_caller_user_agent_overrides_default(monkeypatch):
+    captured = {}
+
+    def fake_get(url, **kwargs):
+        captured.update(kwargs)
+        return FakeResponse()
+
+    monkeypatch.setattr(_http.requests, 'get', fake_get)
+
+    _http.get('https://example.org', headers={'User-Agent': 'custom-ua'})
+
+    assert captured['headers']['User-Agent'] == 'custom-ua'
+
+
 def test_retries_transient_5xx_then_succeeds(monkeypatch):
     calls = []
     responses = [FakeResponse(502), FakeResponse(200)]
