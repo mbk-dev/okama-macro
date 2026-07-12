@@ -1,6 +1,6 @@
 import pandas as pd
 
-from nbsc import request_data
+from . import request_data
 
 today_year = pd.Timestamp.today().strftime("%Y")
 

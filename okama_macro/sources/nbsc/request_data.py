@@ -73,7 +73,7 @@ def _load_codes() -> dict:
     global _codes
     if _codes is not None:
         return _codes
-    codes_file = resources.files("nbsc").joinpath("codes.json")
+    codes_file = resources.files("okama_macro.sources.nbsc").joinpath("codes.json")
     raw = json.loads(codes_file.read_text(encoding="utf-8"))
     raw.pop("_meta", None)
     _codes = raw

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from nbsc import request_data
+from . import request_data
 
 today_year = pd.Timestamp.today().strftime("%Y")
 
@@ -27,10 +27,10 @@ def get_recent_inflation(first_year: str = "2016") -> pd.Series:
     """
     Request monthly inflation time series (2016+).
     """
-    s_2021 = request_data.load_nbs_web( 
+    s_2021 = request_data.load_nbs_web(
         series="A01030G01", periods=f"{first_year}-{today_year}", freq="month"
-    )    
-    
+    )
+
     s_2021.index = s_2021.index.to_period("M")
     s_2021 = s_2021.sort_index()
     s_2021 = check_for_zero(s_2021)
@@ -56,26 +56,26 @@ def get_annual_inflation(first_year: str = "1987") -> pd.Series:
             series="A01010G01", periods=f"{first_year}-{today_year}", freq="month")
     else:
         s_new = request_data.load_nbs_web(
-            series="A01010G01", periods=f"2021-{today_year}", freq="month")        
-    
+            series="A01010G01", periods=f"2021-{today_year}", freq="month")
+
     if int(first_year) <= 2020:
         if int(first_year) <= 2015:
             s_old_1 = request_data.load_nbs_web(
                 series="A01010201", periods=f"{first_year}-2015", freq="month")
         else:
             s_old_1 = pd.Series()
-        
+
         if int(first_year) <= 2020:
-            start_year = max(int(first_year), 2016)  
+            start_year = max(int(first_year), 2016)
             s_old_2 = request_data.load_nbs_web(
                 series="A01010101", periods=f"{start_year}-2020", freq="month")
         else:
             s_old_2 = pd.Series()
-            
+
         s_old = pd.concat([s_old_1, s_old_2], axis=0)
     else:
         s_old = pd.Series()
-        
+
     s = pd.concat([s_old, s_new], axis=0, join="outer", copy="false")
     s.index = s.index.to_period("M")
     s.sort_index(inplace=True)
