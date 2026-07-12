@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "okama-macro"
+version = "0.1.0"
+description = "Macro-economic data-source clients (CPI, central-bank rates) for the okama project"
+authors = ["mbk-dev"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "okama_macro" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+pandas = "*"
+requests = "*"
+lxml = "*"
+urllib3 = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+ruff = "*"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["C", "E", "F", "W", "B"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
