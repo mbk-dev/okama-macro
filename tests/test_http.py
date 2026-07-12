@@ -139,3 +139,27 @@ def test_use_proxy_passes_env_proxies(monkeypatch):
 
     assert captured['proxies'] == {'http': 'http://127.0.0.1:3128',
                                    'https': 'http://127.0.0.1:3128'}
+
+
+def test_legacy_tls_session_sets_ua_and_no_verify(monkeypatch):
+    monkeypatch.delenv('PROXY_HOST', raising=False)
+    monkeypatch.delenv('PROXY_PORT', raising=False)
+
+    session = _http.legacy_tls_session()
+
+    assert session.headers['User-Agent'] == _http.USER_AGENT
+    assert session.verify is False
+    adapter = session.get_adapter('https://x')
+    assert isinstance(adapter, _http._LegacyRenegotiationAdapter)
+
+
+def test_legacy_tls_session_picks_up_env_proxy(monkeypatch):
+    monkeypatch.setenv('PROXY_HOST', '127.0.0.1')
+    monkeypatch.setenv('PROXY_PORT', '3128')
+    monkeypatch.delenv('PROXY_USER', raising=False)
+    monkeypatch.delenv('PROXY_PASS', raising=False)
+
+    session = _http.legacy_tls_session()
+
+    assert session.proxies == {'http': 'http://127.0.0.1:3128',
+                               'https': 'http://127.0.0.1:3128'}

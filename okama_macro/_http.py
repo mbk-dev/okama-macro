@@ -11,9 +11,13 @@ serves endpoints that need OpenSSL legacy server renegotiation.
 
 import logging
 import os
+import ssl
 import time
 
 import requests
+import urllib3
+from requests.adapters import HTTPAdapter
+from urllib3 import PoolManager
 
 info_logger = logging.getLogger('okama_macro.http')
 
@@ -34,6 +38,20 @@ def proxies_from_env() -> dict[str, str] | None:
     auth = f'{user}:{password}@' if user and password else ''
     url = f'http://{auth}{host}:{port}'
     return {'http': url, 'https': url}
+
+
+class _LegacyRenegotiationAdapter(HTTPAdapter):
+    """HTTPAdapter enabling OpenSSL legacy server connect (api.mospi.gov.in)."""
+
+    def __init__(self, ssl_context: ssl.SSLContext, **kwargs):
+        self._ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, connections, maxsize, block=False, **pool_kwargs):
+        pool_kwargs['ssl_context'] = self._ssl_context
+        self.poolmanager = PoolManager(
+            num_pools=connections, maxsize=maxsize, block=block, **pool_kwargs,
+        )
 
 
 def get(url: str,
@@ -75,3 +93,26 @@ def get(url: str,
             raise RuntimeError(f'{label} failed: {message}') from None
     msg = f'{label} failed after {max_attempts} attempts'
     raise RuntimeError(msg)  # pragma: no cover
+
+
+def legacy_tls_session() -> requests.Session:
+    """A Session for endpoints needing legacy TLS renegotiation (MOSPI).
+
+    Verification is disabled (the endpoint presents a chain OpenSSL rejects) —
+    the same workaround as MOSPI's own reference client. UA and env proxies
+    are preset.
+    """
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    ssl_context = ssl.create_default_context()
+    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+    ssl_context.options |= getattr(ssl, 'OP_LEGACY_SERVER_CONNECT', 0x4)
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    session = requests.Session()
+    session.headers.update({'User-Agent': USER_AGENT})
+    session.verify = False
+    session.mount('https://', _LegacyRenegotiationAdapter(ssl_context))
+    proxies = proxies_from_env()
+    if proxies:
+        session.proxies = proxies
+    return session
