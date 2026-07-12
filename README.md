@@ -19,7 +19,7 @@ Python >= 3.11; works on pandas 2.x and 3.x.
 import okama_macro
 
 okama_macro.list_series()
-# ['HKD.INFL', 'HK_BR.RATE', 'INR.INFL', 'IND_RBI.RATE', 'USD.INFL', 'US_EFFR.RATE']
+# ['HKD.INFL', 'HK_BR.RATE', 'IND_RBI.RATE', 'INR.INFL', 'USD.INFL', 'US_EFFR.RATE']
 
 s = okama_macro.get('US_EFFR.RATE', first_date='2020-01-01')
 ```
