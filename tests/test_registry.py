@@ -9,7 +9,7 @@ from okama_macro import registry
 
 def test_list_series_contains_the_phase1_keys():
     assert set(okama_macro.list_series()) == {
-        'USD.INFL', 'HKD.INFL', 'INR.INFL',
+        'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL',
         'US_EFFR.RATE', 'HK_BR.RATE', 'IND_RBI.RATE',
     }
 
@@ -119,3 +119,26 @@ def test_get_returns_float_ascending(monkeypatch):
 
     assert s.index.is_monotonic_increasing
     assert s.dtype == 'float64'
+
+
+def test_cny_infl_passes_through_fractions(monkeypatch):
+    # nbsc returns m/m FRACTIONS on a monthly PeriodIndex already.
+    idx = pd.period_range("2025-10", periods=3, freq="M")
+    monkeypatch.setattr(
+        registry.nbsc, "get_recent_inflation",
+        lambda first_year="2016": pd.Series([0.004, -0.001, 0.002], index=idx)
+    )
+
+    s = okama_macro.get("CNY.INFL")
+
+    assert s.name == "CNY.INFL"
+    # No pct_change applied — the fraction is passed straight through.
+    assert s.iloc[0] == pytest.approx(0.004)
+    # PeriodIndex -> first-of-month DatetimeIndex.
+    assert s.index[0] == pd.Timestamp("2025-10-01")
+    assert s.index.is_monotonic_increasing
+    assert s.dtype == "float64"
+
+
+def test_cny_infl_in_list_series():
+    assert "CNY.INFL" in okama_macro.list_series()

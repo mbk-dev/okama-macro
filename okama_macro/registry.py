@@ -13,7 +13,7 @@ from collections.abc import Callable
 import pandas as pd
 
 from okama_macro import _frame
-from okama_macro.sources import bis, censtatd, fred, hkma, mospi, rbi
+from okama_macro.sources import bis, censtatd, fred, hkma, mospi, nbsc, rbi
 
 Fetcher = Callable[[pd.Timestamp | None, pd.Timestamp | None], pd.Series]
 
@@ -85,6 +85,23 @@ def _inr_infl(
     first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
 ) -> pd.Series:
     return _cpi_mom(mospi.get_general_cpi(), first_date, last_date)
+
+
+@_register('CNY.INFL')
+def _cny_infl(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    """China m/m inflation fractions from the folded nbsc (NBS China).
+
+    nbsc returns m/m fractions already (the NBS 'same-period=100' index turned
+    into ``(x-100)/100``), so the registry passes them through — no pct_change.
+    A two-years-back fetch keeps NBS's retroactive corrections re-pulled (#14).
+    """
+    first_year = str((pd.Timestamp.today().year) - 2)
+    s = nbsc.get_recent_inflation(first_year)
+    if isinstance(s.index, pd.PeriodIndex):
+        s.index = s.index.to_timestamp()
+    return _frame.clip_window(s, first_date, last_date)
 
 
 @_register('US_EFFR.RATE')
