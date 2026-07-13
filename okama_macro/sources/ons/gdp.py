@@ -1,12 +1,12 @@
 import pandas as pd
 from io import StringIO
 
-import ons
+from okama_macro.sources.ons import request_data
 
 
 def get_gdp() -> pd.Series:
     gdp_key = "regional-gdp-by-quarter"
-    jresp = ons.request_data.get_data(key=gdp_key)
+    jresp = request_data.get_data(key=gdp_key)
     # TODO: the data available up to 2022 Q3
     df = pd.read_csv(StringIO(jresp),
                      engine='python',

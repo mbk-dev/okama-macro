@@ -1,5 +1,5 @@
 import pandas as pd
-import ons
+from okama_macro.sources.ons import request_data
 
 
 def get_cpih() -> pd.Series:
@@ -11,7 +11,7 @@ def get_cpih() -> pd.Series:
     and living in one's own home, known as owner occupiers' housing costs
     (OOH), along with council tax.
     """
-    data = ons.request_data.get_timeseries("l522")
+    data = request_data.get_timeseries("l522")
     months = data["months"]
     dates = pd.to_datetime(
         [m["date"] for m in months], format="%Y %b"
