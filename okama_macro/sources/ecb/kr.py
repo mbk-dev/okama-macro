@@ -1,5 +1,5 @@
 import pandas as pd
-import ecb
+from okama_macro.sources.ecb import request_data
 
 
 def get_refinancing_rate(start_date: pd.Timestamp = pd.Timestamp(1900, 1, 1),
@@ -12,7 +12,7 @@ def get_refinancing_rate(start_date: pd.Timestamp = pd.Timestamp(1900, 1, 1),
         end_period = end_date.strftime("%Y-%m-%d")
     else:
         end_period = None
-    s = ecb.request_data.get_data_frame("FM", "D.U2.EUR.4F.KR.MRR_FR.LEV",
+    s = request_data.get_data_frame("FM", "D.U2.EUR.4F.KR.MRR_FR.LEV",
                                         start_period=start_period, end_period=end_period)
     s = s.rename("main_rate")
     return s / 100
@@ -30,7 +30,7 @@ def get_deposit_rate(start_date: pd.Timestamp = pd.Timestamp(1900, 1, 1),
         end_period = end_date.strftime("%Y-%m-%d")
     else:
         end_period = None
-    s = ecb.request_data.get_data_frame("FM", "D.U2.EUR.4F.KR.DFR.LEV",
+    s = request_data.get_data_frame("FM", "D.U2.EUR.4F.KR.DFR.LEV",
                                         start_period=start_period, end_period=end_period)
     s = s.rename("deposit_rate")
     return s / 100
@@ -49,7 +49,7 @@ def get_marginal_rate(start_date: pd.Timestamp = pd.Timestamp(1900, 1, 1),
         end_period = end_date.strftime("%Y-%m-%d")
     else:
         end_period = None
-    s = ecb.request_data.get_data_frame(
+    s = request_data.get_data_frame(
         "FM",
         "D.U2.EUR.4F.KR.MLFR.LEV",
         start_period=start_period,

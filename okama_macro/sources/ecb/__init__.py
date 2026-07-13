@@ -1,11 +1,13 @@
-from importlib.metadata import version
-from ecb.kr import (
+from okama_macro.sources.ecb.kr import (
     get_refinancing_rate,
     get_deposit_rate,
     get_marginal_rate,
 )
-from ecb.gdp import get_gdp_q
-from ecb.hicp import get_hicp
-from ecb.request_data import get_data_frame
+from okama_macro.sources.ecb.gdp import get_gdp_q
+from okama_macro.sources.ecb.hicp import get_hicp
+from okama_macro.sources.ecb.request_data import get_data_frame
 
-__version__ = version("ecb")
+__all__ = [
+    'get_refinancing_rate', 'get_deposit_rate', 'get_marginal_rate',
+    'get_gdp_q', 'get_hicp', 'get_data_frame',
+]

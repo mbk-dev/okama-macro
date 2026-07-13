@@ -27,6 +27,7 @@ select = ["C", "E", "F", "W", "B"]
 [tool.ruff.lint.per-file-ignores]
 "okama_macro/sources/nbsc/*.py" = ["E501", "C901"]
 "okama_macro/sources/cfets/*.py" = ["E711"]
+"okama_macro/sources/ecb/*.py" = ["B008", "E501", "E711"]
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,5 +1,5 @@
 import pandas as pd
-import ecb
+from okama_macro.sources.ecb import request_data
 
 
 def get_gdp_q(start_period: str = "1900-01-01", end_period: str = None) -> pd.Series:
@@ -8,7 +8,7 @@ def get_gdp_q(start_period: str = "1900-01-01", end_period: str = None) -> pd.Se
 
     GDP data is available from 1995.
     """
-    s = ecb.request_data.get_data_frame(
+    s = request_data.get_data_frame(
         agency="MNA",
         code="Q.N.I8.W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.V.N",
         freq="Q",
