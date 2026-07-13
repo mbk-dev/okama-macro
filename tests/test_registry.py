@@ -12,6 +12,7 @@ def test_list_series_contains_the_phase1_keys():
         'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL', 'ILS.INFL', 'GBP.INFL',
         'US_EFFR.RATE', 'HK_BR.RATE', 'IND_RBI.RATE',
         'CHN_LPR1.RATE', 'CHN_LPR5.RATE', 'ISR_IR.RATE',
+        'EU_MRO.RATE', 'EU_MLR.RATE', 'EU_DFR.RATE',
     }
 
 
@@ -257,3 +258,46 @@ def test_gbp_infl_clips_window(monkeypatch):
 
     assert s.index[0] == pd.Timestamp('2024-02-01')   # clipped
     assert len(s) == 2
+
+
+def test_eu_mro_passes_through_fractions(monkeypatch):
+    # ecb returns fractions on a daily PeriodIndex already.
+    idx = pd.period_range('2024-06-06', periods=2, freq='D')
+    monkeypatch.setattr(registry.ecb, 'get_refinancing_rate',
+                        lambda start_date=None, end_date=None:
+                        pd.Series([0.0425, 0.0365], index=idx))
+
+    s = okama_macro.get('EU_MRO.RATE')
+
+    assert s.name == 'EU_MRO.RATE'
+    assert (s.abs() < 1).all()
+    assert isinstance(s.index, pd.DatetimeIndex)
+    assert s.index.is_monotonic_increasing
+    assert s.dtype == 'float64'
+
+
+def test_eu_dfr_routes_to_get_deposit_rate(monkeypatch):
+    called = {}
+    idx = pd.period_range('2024-06-06', periods=1, freq='D')
+    def fake(start_date=None, end_date=None):
+        called['hit'] = True
+        return pd.Series([0.0375], index=idx)
+    monkeypatch.setattr(registry.ecb, 'get_deposit_rate', fake)
+
+    s = okama_macro.get('EU_DFR.RATE')
+    assert called.get('hit') is True
+    assert s.iloc[0] == pytest.approx(0.0375)
+
+
+def test_eu_mlr_forwards_timestamp_start_date(monkeypatch):
+    captured = {}
+    idx = pd.period_range('2024-06-06', periods=1, freq='D')
+    def fake(start_date=None, end_date=None):
+        captured['start_date'] = start_date
+        return pd.Series([0.0465], index=idx)
+    monkeypatch.setattr(registry.ecb, 'get_marginal_rate', fake)
+
+    okama_macro.get('EU_MLR.RATE', first_date=pd.Timestamp('2020-01-01'))
+    # ecb .strftime's it internally, so a Timestamp is correct (not a string).
+    assert captured['start_date'] == pd.Timestamp('2020-01-01')
+    assert isinstance(captured['start_date'], pd.Timestamp)

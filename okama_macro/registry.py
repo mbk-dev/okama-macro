@@ -14,7 +14,7 @@ import pandas as pd
 
 from okama_macro import _frame
 from okama_macro.sources import (
-    bis, boi, censtatd, cfets, fred, hkma, mospi, nbsc, ons, rbi
+    bis, boi, censtatd, cfets, ecb, fred, hkma, mospi, nbsc, ons, rbi
 )
 
 Fetcher = Callable[[pd.Timestamp | None, pd.Timestamp | None], pd.Series]
@@ -222,3 +222,40 @@ def _isr_ir(
     if isinstance(s.index, pd.PeriodIndex):
         s.index = s.index.to_timestamp()
     return _frame.clip_window(s, first_date, last_date)
+
+
+def _ecb_rate(fetch: Callable[..., pd.Series],
+              first_date: pd.Timestamp | None,
+              last_date: pd.Timestamp | None) -> pd.Series:
+    """ECB key-rate fraction series from the folded ecb (observations-only).
+
+    ecb returns fractions (÷100 applied) on a daily PeriodIndex and takes a
+    Timestamp start_date (it .strftime's it internally); convert the index to a
+    DatetimeIndex and clip. ``get()`` sorts ascending; padding stays downstream.
+    """
+    kwargs = {} if first_date is None else {'start_date': pd.Timestamp(first_date)}
+    s = fetch(**kwargs)
+    if isinstance(s.index, pd.PeriodIndex):
+        s.index = s.index.to_timestamp()
+    return _frame.clip_window(s, first_date, last_date)
+
+
+@_register('EU_MRO.RATE')
+def _eu_mro(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    return _ecb_rate(ecb.get_refinancing_rate, first_date, last_date)
+
+
+@_register('EU_MLR.RATE')
+def _eu_mlr(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    return _ecb_rate(ecb.get_marginal_rate, first_date, last_date)
+
+
+@_register('EU_DFR.RATE')
+def _eu_dfr(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    return _ecb_rate(ecb.get_deposit_rate, first_date, last_date)
