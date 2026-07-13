@@ -14,7 +14,7 @@ import pandas as pd
 
 from okama_macro import _frame
 from okama_macro.sources import (
-    bis, boi, censtatd, cfets, ecb, fred, hkma, mospi, nbsc, ons, rbi
+    bis, boe, boi, censtatd, cfets, ecb, fred, hkma, mospi, nbsc, ons, rbi
 )
 
 Fetcher = Callable[[pd.Timestamp | None, pd.Timestamp | None], pd.Series]
@@ -259,3 +259,23 @@ def _eu_dfr(
     first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
 ) -> pd.Series:
     return _ecb_rate(ecb.get_deposit_rate, first_date, last_date)
+
+
+@_register('UK_BR.RATE')
+def _uk_br(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    """Bank of England bank rate fractions from the folded boe.
+
+    Unlike the other rate keys, boe returns a **pre-padded** daily series (it
+    reads the BoE change-dates table and forward-fills through today — the boe#6
+    look-ahead fix; stripping that would change behavior), so this key is the
+    documented exception to the observations-only contract. Fractions (÷100
+    inside); Timestamp start_date (.strftime'd internally). The prod DB's pre-1975
+    UK_BR depth is a separate BIS backfill the nightly upsert leaves intact.
+    """
+    kwargs = {} if first_date is None else {'start_date': pd.Timestamp(first_date)}
+    s = boe.get_bank_rate(**kwargs)
+    if isinstance(s.index, pd.PeriodIndex):
+        s.index = s.index.to_timestamp()
+    return _frame.clip_window(s, first_date, last_date)

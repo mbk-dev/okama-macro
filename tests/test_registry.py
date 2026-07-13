@@ -12,7 +12,7 @@ def test_list_series_contains_the_phase1_keys():
         'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL', 'ILS.INFL', 'GBP.INFL',
         'US_EFFR.RATE', 'HK_BR.RATE', 'IND_RBI.RATE',
         'CHN_LPR1.RATE', 'CHN_LPR5.RATE', 'ISR_IR.RATE',
-        'EU_MRO.RATE', 'EU_MLR.RATE', 'EU_DFR.RATE',
+        'EU_MRO.RATE', 'EU_MLR.RATE', 'EU_DFR.RATE', 'UK_BR.RATE',
     }
 
 
@@ -299,5 +299,35 @@ def test_eu_mlr_forwards_timestamp_start_date(monkeypatch):
 
     okama_macro.get('EU_MLR.RATE', first_date=pd.Timestamp('2020-01-01'))
     # ecb .strftime's it internally, so a Timestamp is correct (not a string).
+    assert captured['start_date'] == pd.Timestamp('2020-01-01')
+    assert isinstance(captured['start_date'], pd.Timestamp)
+
+
+def test_uk_br_passes_through_fractions(monkeypatch):
+    # boe returns fractions on a (pre-padded) daily PeriodIndex.
+    idx = pd.period_range('2024-01-01', periods=3, freq='D')
+    monkeypatch.setattr(registry.boe, 'get_bank_rate',
+                        lambda start_date=None, end_date=None:
+                        pd.Series([0.0475, 0.0475, 0.0450], index=idx))
+
+    s = okama_macro.get('UK_BR.RATE')
+
+    assert s.name == 'UK_BR.RATE'
+    assert (s.abs() < 1).all()
+    assert isinstance(s.index, pd.DatetimeIndex)
+    assert s.index.is_monotonic_increasing
+    assert s.dtype == 'float64'
+
+
+def test_uk_br_forwards_timestamp_start_date(monkeypatch):
+    captured = {}
+    idx = pd.period_range('2024-01-01', periods=1, freq='D')
+    def fake(start_date=None, end_date=None):
+        captured['start_date'] = start_date
+        return pd.Series([0.0475], index=idx)
+    monkeypatch.setattr(registry.boe, 'get_bank_rate', fake)
+
+    okama_macro.get('UK_BR.RATE', first_date=pd.Timestamp('2020-01-01'))
+    # boe .strftime's it internally, so a Timestamp is correct (cfets pattern).
     assert captured['start_date'] == pd.Timestamp('2020-01-01')
     assert isinstance(captured['start_date'], pd.Timestamp)
