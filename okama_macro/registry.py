@@ -13,7 +13,7 @@ from collections.abc import Callable
 import pandas as pd
 
 from okama_macro import _frame
-from okama_macro.sources import bis, censtatd, fred, hkma, mospi, nbsc, rbi
+from okama_macro.sources import bis, censtatd, cfets, fred, hkma, mospi, nbsc, rbi
 
 Fetcher = Callable[[pd.Timestamp | None, pd.Timestamp | None], pd.Series]
 
@@ -137,3 +137,33 @@ def _ind_rbi(
             s.empty or s.index[-1] < today):
         s.loc[today] = rbi.get_current_repo_rate()
     return s / 100
+
+
+def _lpr(fetch: Callable[..., pd.Series],
+         first_date: pd.Timestamp | None,
+         last_date: pd.Timestamp | None) -> pd.Series:
+    """China LPR fraction series from the folded cfets (observations-only).
+
+    cfets returns m/m-cadence LPR fractions (÷100 already applied) on a daily
+    PeriodIndex; convert to a DatetimeIndex and clip. ``get()`` sorts ascending
+    and padding to a daily grid stays the consumer's job (rates contract).
+    """
+    kwargs = {} if first_date is None else {'start_date': pd.Timestamp(first_date)}
+    s = fetch(**kwargs)
+    if isinstance(s.index, pd.PeriodIndex):
+        s.index = s.index.to_timestamp()
+    return _frame.clip_window(s, first_date, last_date)
+
+
+@_register('CHN_LPR1.RATE')
+def _chn_lpr1(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    return _lpr(cfets.get_lpr_1y, first_date, last_date)
+
+
+@_register('CHN_LPR5.RATE')
+def _chn_lpr5(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    return _lpr(cfets.get_lpr_5y, first_date, last_date)

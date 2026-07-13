@@ -11,6 +11,7 @@ def test_list_series_contains_the_phase1_keys():
     assert set(okama_macro.list_series()) == {
         'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL',
         'US_EFFR.RATE', 'HK_BR.RATE', 'IND_RBI.RATE',
+        'CHN_LPR1.RATE', 'CHN_LPR5.RATE',
     }
 
 
@@ -142,3 +143,46 @@ def test_cny_infl_passes_through_fractions(monkeypatch):
 
 def test_cny_infl_in_list_series():
     assert "CNY.INFL" in okama_macro.list_series()
+
+
+def test_chn_lpr1_passes_through_fractions(monkeypatch):
+    # cfets returns fractions on a daily PeriodIndex, sorted DESCENDING.
+    idx = pd.period_range('2024-09-20', periods=2, freq='D')[::-1]
+    monkeypatch.setattr(registry.cfets, 'get_lpr_1y',
+                        lambda start_date=None, end_date=None:
+                        pd.Series([0.0335, 0.0310], index=idx))
+
+    s = okama_macro.get('CHN_LPR1.RATE')
+
+    assert s.name == 'CHN_LPR1.RATE'
+    assert (s.abs() < 1).all()                       # fractions, not percent
+    assert isinstance(s.index, pd.DatetimeIndex)     # PeriodIndex -> DatetimeIndex
+    assert s.index.is_monotonic_increasing           # get() sorts ascending
+    assert s.dtype == 'float64'
+
+
+def test_chn_lpr5_routes_to_get_lpr_5y(monkeypatch):
+    called = {}
+    idx = pd.period_range('2024-10-21', periods=1, freq='D')
+    def fake(start_date=None, end_date=None):
+        called['hit'] = True
+        return pd.Series([0.0360], index=idx)
+    monkeypatch.setattr(registry.cfets, 'get_lpr_5y', fake)
+
+    s = okama_macro.get('CHN_LPR5.RATE')
+
+    assert called.get('hit') is True
+    assert s.iloc[0] == pytest.approx(0.0360)
+
+
+def test_chn_lpr_first_date_forwarded(monkeypatch):
+    captured = {}
+    idx = pd.period_range('2024-10-21', periods=1, freq='D')
+    def fake(start_date=None, end_date=None):
+        captured['start_date'] = start_date
+        return pd.Series([0.0310], index=idx)
+    monkeypatch.setattr(registry.cfets, 'get_lpr_1y', fake)
+
+    okama_macro.get('CHN_LPR1.RATE', first_date=pd.Timestamp('2020-01-01'))
+
+    assert captured['start_date'] == pd.Timestamp('2020-01-01')
