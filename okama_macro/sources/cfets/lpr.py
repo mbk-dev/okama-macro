@@ -1,7 +1,7 @@
 from io import StringIO
 
 import pandas as pd
-from cfets import request_data
+from okama_macro.sources.cfets import request_data
 
 lpr_code = "LprChrtCSV"
 sd = pd.Timestamp(2013, 10, 1)
@@ -30,7 +30,7 @@ def get_lpr_5y(start_date: pd.Timestamp = sd,
     return df.loc[:, "lpr5y"].dropna()
 
 
-def prepare_data(d: dict) -> pd.DataFrame:
+def prepare_data(d: str) -> pd.DataFrame:
     df = pd.read_csv(
         StringIO(d),
         usecols=[0, 6, 7],
