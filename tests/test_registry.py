@@ -9,9 +9,9 @@ from okama_macro import registry
 
 def test_list_series_contains_the_phase1_keys():
     assert set(okama_macro.list_series()) == {
-        'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL',
+        'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL', 'ILS.INFL',
         'US_EFFR.RATE', 'HK_BR.RATE', 'IND_RBI.RATE',
-        'CHN_LPR1.RATE', 'CHN_LPR5.RATE',
+        'CHN_LPR1.RATE', 'CHN_LPR5.RATE', 'ISR_IR.RATE',
     }
 
 
@@ -186,3 +186,48 @@ def test_chn_lpr_first_date_forwarded(monkeypatch):
     okama_macro.get('CHN_LPR1.RATE', first_date=pd.Timestamp('2020-01-01'))
 
     assert captured['start_date'] == pd.Timestamp('2020-01-01')
+
+
+def test_ils_infl_passes_through_fractions(monkeypatch):
+    # boi returns m/m fractions on a monthly PeriodIndex already.
+    idx = pd.period_range('2024-10', periods=3, freq='M')
+    monkeypatch.setattr(registry.boi, 'get_inflation',
+                        lambda date_start=None, date_end=None:
+                        pd.Series([0.004, -0.001, 0.002], index=idx))
+
+    s = okama_macro.get('ILS.INFL')
+
+    assert s.name == 'ILS.INFL'
+    assert s.iloc[0] == pytest.approx(0.004)        # no pct_change re-applied
+    assert s.index[0] == pd.Timestamp('2024-10-01') # PeriodIndex -> first-of-month
+    assert s.index.is_monotonic_increasing
+    assert s.dtype == 'float64'
+
+
+def test_isr_ir_passes_through_fractions(monkeypatch):
+    idx = pd.period_range('2024-01-01', periods=2, freq='D')
+    monkeypatch.setattr(registry.boi, 'get_ir',
+                        lambda date_start=None, date_end=None:
+                        pd.Series([0.045, 0.045], index=idx))
+
+    s = okama_macro.get('ISR_IR.RATE')
+
+    assert s.name == 'ISR_IR.RATE'
+    assert (s.abs() < 1).all()
+    assert isinstance(s.index, pd.DatetimeIndex)
+    assert s.index.is_monotonic_increasing
+
+
+def test_boi_registry_forwards_date_start_as_string(monkeypatch):
+    captured = {}
+    idx = pd.period_range('2024-01-01', periods=1, freq='D')
+    def fake(date_start=None, date_end=None):
+        captured['date_start'] = date_start
+        return pd.Series([0.045], index=idx)
+    monkeypatch.setattr(registry.boi, 'get_ir', fake)
+
+    okama_macro.get('ISR_IR.RATE', first_date=pd.Timestamp('2020-01-01'))
+
+    # MUST be the plain string, never a Timestamp (the SDMX query interpolates it).
+    assert captured['date_start'] == '2020-01-01'
+    assert isinstance(captured['date_start'], str)

@@ -13,7 +13,7 @@ from collections.abc import Callable
 import pandas as pd
 
 from okama_macro import _frame
-from okama_macro.sources import bis, censtatd, cfets, fred, hkma, mospi, nbsc, rbi
+from okama_macro.sources import bis, boi, censtatd, cfets, fred, hkma, mospi, nbsc, rbi
 
 Fetcher = Callable[[pd.Timestamp | None, pd.Timestamp | None], pd.Series]
 
@@ -167,3 +167,42 @@ def _chn_lpr5(
     first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
 ) -> pd.Series:
     return _lpr(cfets.get_lpr_5y, first_date, last_date)
+
+
+@_register('ILS.INFL')
+def _ils_infl(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    """Israel m/m inflation fractions from the folded boi (Bank of Israel).
+
+    boi returns m/m fractions already (internal ``pct_change().round(4)`` off the
+    2020=100 CPI), so the registry passes them through — no pct_change. boi's
+    date_start is a STRING interpolated into the SDMX query, so it is formatted.
+    """
+    kwargs = (
+        {} if first_date is None
+        else {'date_start': pd.Timestamp(first_date).strftime('%Y-%m-%d')}
+    )
+    s = boi.get_inflation(**kwargs)
+    if isinstance(s.index, pd.PeriodIndex):
+        s.index = s.index.to_timestamp()
+    return _frame.clip_window(s, first_date, last_date)
+
+
+@_register('ISR_IR.RATE')
+def _isr_ir(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    """Bank of Israel policy rate fractions from the folded boi (observations-only).
+
+    boi returns fractions already (internal ``/100``) on a daily PeriodIndex;
+    convert to DatetimeIndex and clip. date_start is a STRING (SDMX query).
+    """
+    kwargs = (
+        {} if first_date is None
+        else {'date_start': pd.Timestamp(first_date).strftime('%Y-%m-%d')}
+    )
+    s = boi.get_ir(**kwargs)
+    if isinstance(s.index, pd.PeriodIndex):
+        s.index = s.index.to_timestamp()
+    return _frame.clip_window(s, first_date, last_date)
