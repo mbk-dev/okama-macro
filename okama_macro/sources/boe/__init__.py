@@ -1,5 +1,4 @@
-from importlib.metadata import version
+from okama_macro.sources.boe.request_data import get_data_frame
+from okama_macro.sources.boe.kr import get_bank_rate
 
-from boe.request_data import get_data_frame
-from boe.kr import get_bank_rate
-__version__ = version("boe")
+__all__ = ['get_data_frame', 'get_bank_rate']
