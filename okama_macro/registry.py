@@ -13,7 +13,9 @@ from collections.abc import Callable
 import pandas as pd
 
 from okama_macro import _frame
-from okama_macro.sources import bis, boi, censtatd, cfets, fred, hkma, mospi, nbsc, rbi
+from okama_macro.sources import (
+    bis, boi, censtatd, cfets, fred, hkma, mospi, nbsc, ons, rbi
+)
 
 Fetcher = Callable[[pd.Timestamp | None, pd.Timestamp | None], pd.Series]
 
@@ -102,6 +104,20 @@ def _cny_infl(
     if isinstance(s.index, pd.PeriodIndex):
         s.index = s.index.to_timestamp()
     return _frame.clip_window(s, first_date, last_date)
+
+
+@_register('GBP.INFL')
+def _gbp_infl(
+    first_date: pd.Timestamp | None, last_date: pd.Timestamp | None
+) -> pd.Series:
+    """UK m/m inflation fractions from the folded ons (ONS CPIH, series l522).
+
+    ons returns m/m fractions already (internal ``pct_change().round(4)`` off the
+    CPIH index) on a first-of-month DatetimeIndex and takes no date args, so the
+    registry passes them through and clips. The prod DB's pre-1988 GBP.INFL depth
+    is a separate boe#6 backfill the nightly upsert leaves intact.
+    """
+    return _frame.clip_window(ons.get_inflation_cpih(), first_date, last_date)
 
 
 @_register('US_EFFR.RATE')

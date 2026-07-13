@@ -9,7 +9,7 @@ from okama_macro import registry
 
 def test_list_series_contains_the_phase1_keys():
     assert set(okama_macro.list_series()) == {
-        'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL', 'ILS.INFL',
+        'USD.INFL', 'HKD.INFL', 'INR.INFL', 'CNY.INFL', 'ILS.INFL', 'GBP.INFL',
         'US_EFFR.RATE', 'HK_BR.RATE', 'IND_RBI.RATE',
         'CHN_LPR1.RATE', 'CHN_LPR5.RATE', 'ISR_IR.RATE',
     }
@@ -231,3 +231,29 @@ def test_boi_registry_forwards_date_start_as_string(monkeypatch):
     # MUST be the plain string, never a Timestamp (the SDMX query interpolates it).
     assert captured['date_start'] == '2020-01-01'
     assert isinstance(captured['date_start'], str)
+
+
+def test_gbp_infl_passes_through_fractions(monkeypatch):
+    # ons returns m/m fractions on a first-of-month DatetimeIndex already.
+    idx = pd.to_datetime(['2024-10-01', '2024-11-01', '2024-12-01'])
+    monkeypatch.setattr(registry.ons, 'get_inflation_cpih',
+                        lambda: pd.Series([0.004, -0.001, 0.002], index=idx))
+
+    s = okama_macro.get('GBP.INFL')
+
+    assert s.name == 'GBP.INFL'
+    assert s.iloc[0] == pytest.approx(0.004)          # no pct_change re-applied
+    assert s.index[0] == pd.Timestamp('2024-10-01')
+    assert s.index.is_monotonic_increasing
+    assert s.dtype == 'float64'
+
+
+def test_gbp_infl_clips_window(monkeypatch):
+    idx = pd.to_datetime(['2024-01-01', '2024-02-01', '2024-03-01'])
+    monkeypatch.setattr(registry.ons, 'get_inflation_cpih',
+                        lambda: pd.Series([0.001, 0.002, 0.003], index=idx))
+
+    s = okama_macro.get('GBP.INFL', first_date=pd.Timestamp('2024-02-01'))
+
+    assert s.index[0] == pd.Timestamp('2024-02-01')   # clipped
+    assert len(s) == 2
