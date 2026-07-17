@@ -1,5 +1,7 @@
 """Tests for the shared HTTP layer (okama_macro/_http.py)."""
 
+import ssl
+
 import pytest
 import requests
 
@@ -151,6 +153,26 @@ def test_legacy_tls_session_sets_ua_and_no_verify(monkeypatch):
     assert session.verify is False
     adapter = session.get_adapter('https://x')
     assert isinstance(adapter, _http._LegacyRenegotiationAdapter)
+
+
+def test_legacy_adapter_injects_ssl_context_into_direct_pool():
+    ctx = ssl.create_default_context()
+    adapter = _http._LegacyRenegotiationAdapter(ctx)
+
+    assert adapter.poolmanager.connection_pool_kw.get('ssl_context') is ctx
+
+
+def test_legacy_adapter_injects_ssl_context_into_proxy_manager():
+    # On the production server MOSPI is fetched through the local HAProxy, so
+    # the legacy-renegotiation SSL context must reach the proxied pool too —
+    # otherwise the tunneled TLS handshake to api.mospi.gov.in loses
+    # OP_LEGACY_SERVER_CONNECT and fails with UNSAFE_LEGACY_RENEGOTIATION_DISABLED.
+    ctx = ssl.create_default_context()
+    adapter = _http._LegacyRenegotiationAdapter(ctx)
+
+    proxy_manager = adapter.proxy_manager_for('http://127.0.0.1:3128')
+
+    assert proxy_manager.connection_pool_kw.get('ssl_context') is ctx
 
 
 def test_legacy_tls_session_picks_up_env_proxy(monkeypatch):

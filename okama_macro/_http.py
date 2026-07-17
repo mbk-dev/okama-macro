@@ -53,6 +53,15 @@ class _LegacyRenegotiationAdapter(HTTPAdapter):
             num_pools=connections, maxsize=maxsize, block=block, **pool_kwargs,
         )
 
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        # Proxied HTTPS uses a separate ProxyManager that does NOT inherit the
+        # context from init_poolmanager, so inject it here too. On the
+        # production server MOSPI is fetched through the local HAProxy; without
+        # this the tunneled TLS handshake loses OP_LEGACY_SERVER_CONNECT and
+        # fails with UNSAFE_LEGACY_RENEGOTIATION_DISABLED.
+        proxy_kwargs['ssl_context'] = self._ssl_context
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
+
 
 def get(url: str,
         *,
