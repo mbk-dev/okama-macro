@@ -32,6 +32,12 @@ def get_data_frame(
         'endPeriod': end_period,
     }
     response = _http.get(request_url, params=params, label=f'ecb {code}')
+    if not response.text.strip():
+        # Outside a series' range the ECB answers 200 with an EMPTY body (not a
+        # 404), which read_csv rejects with EmptyDataError. An empty window is
+        # not an error: return an empty series of the right shape.
+        empty_index = pd.PeriodIndex([], freq=freq, name='date')
+        return pd.Series([], index=empty_index, dtype=float)
     df = pd.read_csv(
         StringIO(response.text),
         usecols=['TIME_PERIOD', 'OBS_VALUE'],

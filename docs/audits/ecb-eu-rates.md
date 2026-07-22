@@ -73,3 +73,31 @@ BIS to the basis point. The only divergence is the pre-existing 2000–2008
 fixed-rate-MRO quirk, which the fold preserves (does not introduce) and which is
 flagged for a separate follow-up. **PASS** — proceed to the registry + okama-API
 rewire. No fold-caused corruption; no prod re-pull required for this fold.
+
+## Follow-up resolved — 2026-07-22 (okama-API#53)
+
+The finding above is fixed. `kr.get_refinancing_rate` now **splices** the two ECB
+series instead of serving `MRR_FR` alone:
+
+- `MRR_FR.LEV` outside the variable-rate tender era — it simply has **no
+  observations** between 2000-06-28 and 2008-10-14 (verified against the live
+  data-api: 0 rows in that window), which is why the monthly resample downstream
+  forward-filled 4.25% for eight years;
+- `MRR_MBR.LEV` (minimum bid rate) inside it — published exactly 2000-06-28 →
+  2008-10-14, 3031 daily observations, 12 distinct levels.
+
+`VARIABLE_TENDER_START`/`VARIABLE_TENDER_END` in `sources/ecb/kr.py` bound the
+window; the `MRR_MBR` request is skipped entirely when the requested window does
+not touch it (a pipeline refresh starts at the last stored date). `get_min_bid_rate`
+is exported for direct use. `request_data.get_data_frame` now tolerates the empty
+200-response the ECB returns outside a series' range (it used to raise
+`EmptyDataError`).
+
+Validation of the spliced series:
+
+- 22 rate changes over 2000-06 → 2008-12 where there were none, matching the ECB's
+  published MRO history (2001-05-11 → 4.50, 2001-09-18 → 3.75, 2003-06-06 → 2.00,
+  2005-12-06 → 2.25, 2008-07-09 → 4.25, 2008-10-15 → 3.75).
+- **BIS `WS_CBPOL/D.XM` overlap over the whole variable-tender window: 3031 days,
+  max absolute difference 0.0 pp** (was ~2.25 pp at its worst). The 2000–2008
+  divergence flagged in Part 3 is gone.
