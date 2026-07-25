@@ -1,20 +1,23 @@
-[tool.poetry]
+[project]
 name = "okama-macro"
 version = "0.1.0"
 description = "Macro-economic data-source clients (CPI, central-bank rates) for the okama project"
-authors = ["mbk-dev"]
+authors = [{ name = "mbk-dev" }]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/mbk-dev/okama-macro"
-repository = "https://github.com/mbk-dev/okama-macro"
-packages = [{ include = "okama_macro" }]
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "pandas",
+    "requests",
+    "lxml",
+    "urllib3",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<4.0"
-pandas = "*"
-requests = "*"
-lxml = "*"
-urllib3 = "*"
+[project.urls]
+Homepage = "https://github.com/mbk-dev/okama-macro"
+Repository = "https://github.com/mbk-dev/okama-macro"
+Documentation = "https://mbk-dev.github.io/okama-macro/"
+Issues = "https://github.com/mbk-dev/okama-macro/issues"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
