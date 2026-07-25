@@ -57,24 +57,24 @@ special-case a source:
 
 ## Available series
 
-| Key | Series | Source module |
-|-----|--------|---------------|
-| `USD.INFL` | US CPI, m/m | `fred` (FRED `CPIAUCNS`) |
-| `HKD.INFL` | Hong Kong Composite CPI, m/m | `censtatd` (HK C&SD) |
-| `INR.INFL` | India General CPI, m/m | `mospi` (MOSPI) |
-| `CNY.INFL` | China CPI, m/m | `nbsc` (NBS China) |
-| `GBP.INFL` | UK CPIH, m/m | `ons` (UK ONS) |
-| `ILS.INFL` | Israel CPI, m/m | `boi` (Bank of Israel) |
-| `US_EFFR.RATE` | US Federal Funds rate | `fred` (FRED `DFF`) |
-| `HK_BR.RATE` | HKMA Discount Window Base Rate | `hkma` |
-| `IND_RBI.RATE` | RBI policy repo rate | `bis` (history) + `rbi` (same-day tail) |
-| `CHN_LPR1.RATE` | China one-year Loan Prime Rate | `cfets` |
-| `CHN_LPR5.RATE` | China five-year Loan Prime Rate | `cfets` |
-| `ISR_IR.RATE` | Bank of Israel policy rate | `boi` |
-| `EU_MRO.RATE` | ECB main refinancing operations rate | `ecb` |
-| `EU_MLR.RATE` | ECB marginal lending facility rate | `ecb` |
-| `EU_DFR.RATE` | ECB deposit facility rate | `ecb` |
-| `UK_BR.RATE` | Bank of England Bank Rate | `boe` |
+| Key | Series | Country | Source module |
+|-----|--------|---------|---------------|
+| `USD.INFL` | US CPI, m/m | United States | `fred` (FRED `CPIAUCNS`) |
+| `HKD.INFL` | Hong Kong Composite CPI, m/m | Hong Kong | `censtatd` (HK C&SD) |
+| `INR.INFL` | India General CPI, m/m | India | `mospi` (MOSPI) |
+| `CNY.INFL` | China CPI, m/m | China | `nbsc` (NBS China) |
+| `GBP.INFL` | UK CPIH, m/m | United Kingdom | `ons` (UK ONS) |
+| `ILS.INFL` | Israel CPI, m/m | Israel | `boi` (Bank of Israel) |
+| `US_EFFR.RATE` | US Federal Funds rate | United States | `fred` (FRED `DFF`) |
+| `HK_BR.RATE` | HKMA Discount Window Base Rate | Hong Kong | `hkma` |
+| `IND_RBI.RATE` | RBI policy repo rate | India | `bis` (history) + `rbi` (same-day tail) |
+| `CHN_LPR1.RATE` | China one-year Loan Prime Rate | China | `cfets` |
+| `CHN_LPR5.RATE` | China five-year Loan Prime Rate | China | `cfets` |
+| `ISR_IR.RATE` | Bank of Israel policy rate | Israel | `boi` |
+| `EU_MRO.RATE` | ECB main refinancing operations rate | Euro area | `ecb` |
+| `EU_MLR.RATE` | ECB marginal lending facility rate | Euro area | `ecb` |
+| `EU_DFR.RATE` | ECB deposit facility rate | Euro area | `ecb` |
+| `UK_BR.RATE` | Bank of England Bank Rate | United Kingdom | `boe` |
 
 ## Raw per-source clients
 
