@@ -5,6 +5,8 @@ description = "Macro-economic data-source clients (CPI, central-bank rates) for 
 authors = ["mbk-dev"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/mbk-dev/okama-macro"
+repository = "https://github.com/mbk-dev/okama-macro"
 packages = [{ include = "okama_macro" }]
 
 [tool.poetry.dependencies]

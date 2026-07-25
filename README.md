@@ -12,7 +12,7 @@ and its ADR 0001.
 ## Install
 
 ```bash
-pip install "okama-macro @ git+https://github.com/mbk-dev/okama-macro.git"
+pip install okama-macro
 ```
 
 Requires **Python ≥ 3.11**. Runs on both **pandas 2.x and 3.x**.
@@ -23,7 +23,10 @@ Requires **Python ≥ 3.11**. Runs on both **pandas 2.x and 3.x**.
 import okama_macro
 
 okama_macro.list_series()
-# ['HKD.INFL', 'HK_BR.RATE', 'IND_RBI.RATE', 'INR.INFL', 'USD.INFL', 'US_EFFR.RATE']
+# ['CHN_LPR1.RATE', 'CHN_LPR5.RATE', 'CNY.INFL', 'EU_DFR.RATE',
+#  'EU_MLR.RATE', 'EU_MRO.RATE', 'GBP.INFL', 'HKD.INFL', 'HK_BR.RATE',
+#  'ILS.INFL', 'IND_RBI.RATE', 'INR.INFL', 'ISR_IR.RATE', 'UK_BR.RATE',
+#  'USD.INFL', 'US_EFFR.RATE']
 
 # A rate as a decimal fraction (3.62% -> 0.0362), observations only:
 okama_macro.get('US_EFFR.RATE', first_date='2020-01-01')
@@ -41,10 +44,10 @@ special-case a source:
   never an index level).
 - **CPI series** are monthly, stamped on the **first of the month**, derived from
   the source's index via `pct_change()` (base-invariant).
-- **Rate series** carry **observations only — no padding**. Forward-fill to a
-  daily grid on the consumer side if you need one. (Padding inside a source is how
-  a look-ahead bug once corrupted a whole rate history; keeping it out by
-  construction prevents that class of bug.)
+- **Rate series** normally carry **observations only — no padding**. Forward-fill
+  to a daily grid on the consumer side if you need one. `UK_BR.RATE` is the
+  documented exception: the Bank of England source publishes change dates, and
+  the client safely forward-fills them into a daily series.
 - **Ascending `DatetimeIndex`**, `float` dtype, and `Series.name == key`.
 
 `get()` raises `ValueError` for an unknown key (listing the known ones);
@@ -57,9 +60,19 @@ special-case a source:
 | `USD.INFL` | US CPI, m/m | `fred` (FRED `CPIAUCNS`) |
 | `HKD.INFL` | Hong Kong Composite CPI, m/m | `censtatd` (HK C&SD) |
 | `INR.INFL` | India General CPI, m/m | `mospi` (MOSPI) |
+| `CNY.INFL` | China CPI, m/m | `nbsc` (NBS China) |
+| `GBP.INFL` | UK CPIH, m/m | `ons` (UK ONS) |
+| `ILS.INFL` | Israel CPI, m/m | `boi` (Bank of Israel) |
 | `US_EFFR.RATE` | US Federal Funds rate | `fred` (FRED `DFF`) |
 | `HK_BR.RATE` | HKMA Discount Window Base Rate | `hkma` |
 | `IND_RBI.RATE` | RBI policy repo rate | `bis` (history) + `rbi` (same-day tail) |
+| `CHN_LPR1.RATE` | China one-year Loan Prime Rate | `cfets` |
+| `CHN_LPR5.RATE` | China five-year Loan Prime Rate | `cfets` |
+| `ISR_IR.RATE` | Bank of Israel policy rate | `boi` |
+| `EU_MRO.RATE` | ECB main refinancing operations rate | `ecb` |
+| `EU_MLR.RATE` | ECB marginal lending facility rate | `ecb` |
+| `EU_DFR.RATE` | ECB deposit facility rate | `ecb` |
+| `UK_BR.RATE` | Bank of England Bank Rate | `boe` |
 
 ## Raw per-source clients
 
@@ -68,7 +81,9 @@ data **as the agency publishes it** (CPI index levels, rates in percent) — use
 these only if you need the unnormalised series; prefer `get()` otherwise.
 
 ```python
-from okama_macro.sources import fred, censtatd, hkma, bis, mospi, rbi
+from okama_macro.sources import (
+    bis, boe, boi, censtatd, cfets, ecb, fred, hkma, mospi, nbsc, ons, rbi
+)
 
 hkma.get_base_rate()          # percent, daily
 censtatd.get_composite_cpi()  # CPI index level, monthly
@@ -82,8 +97,6 @@ censtatd.get_composite_cpi()  # CPI index level, monthly
 | `PROXY_HOST`, `PROXY_PORT` | `bis`, `mospi`, `rbi` | Optional outbound HTTP proxy. |
 | `PROXY_USER`, `PROXY_PASS` | — | Optional proxy credentials. |
 
-Sources that need none (`fred`, `hkma`, `censtatd`) fetch directly.
-
 ## Architecture
 
 ```
@@ -93,8 +106,8 @@ okama_macro/
 ├── _http.py           # shared Session: retry/back-off, proxy, browser UA,
 │                       #   legacy-TLS, secret redaction
 ├── _frame.py          # DataFrame/Series shaping helpers
-└── sources/           # one client per source (fred, censtatd, hkma, bis,
-                        #   mospi, rbi, …); some are folded sub-packages
+└── sources/           # one client per source (bis, boe, boi, censtatd, cfets,
+                        #   ecb, fred, hkma, mospi, nbsc, ons, rbi)
 ```
 
 Two layers: thin **sources** (data as published, on the shared `_http`) and a

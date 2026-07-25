@@ -2,10 +2,11 @@
 
 Contract, uniform for every key: values are decimal fractions (m/m CPI
 inflation ``0.0042``, rate ``0.0525``); CPI series are monthly on
-first-of-month dates; rate series carry observations only — padding to a
-daily frequency is the consumer's job (this removes the look-ahead-padding
-bug class, see mbk-dev/boe#6); ascending ``DatetimeIndex``; float dtype;
-``Series.name`` equals the key.
+first-of-month dates; rate series normally carry observations only — padding
+to a daily frequency is the consumer's job. ``UK_BR.RATE`` is the documented
+exception because the Bank of England client safely pads its change-date
+series. All series have an ascending ``DatetimeIndex``, float dtype, and
+``Series.name`` equal to the key.
 """
 
 from collections.abc import Callable
