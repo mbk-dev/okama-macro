@@ -61,8 +61,6 @@ special-case a source:
 | `HK_BR.RATE` | HKMA Discount Window Base Rate | `hkma` |
 | `IND_RBI.RATE` | RBI policy repo rate | `bis` (history) + `rbi` (same-day tail) |
 
-Additional national sources are being folded in (see okama-API#41, Phase 3).
-
 ## Raw per-source clients
 
 Each source also exposes its raw client under `okama_macro.sources.*`, returning
