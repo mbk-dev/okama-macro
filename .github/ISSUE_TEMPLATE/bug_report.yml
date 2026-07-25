@@ -1,0 +1,93 @@
+name: Bug report
+description: Report incorrect data, parsing, transport, or public API behavior.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Do not include API keys, proxy credentials, or other secrets.
+
+  - type: input
+    id: version
+    attributes:
+      label: okama-macro version
+      description: Run `python -m pip show okama-macro` if needed.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: python
+    attributes:
+      label: Python version
+      options:
+        - "3.11"
+        - "3.12"
+        - "3.13"
+        - "3.14"
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pandas
+    attributes:
+      label: pandas version
+      options:
+        - "2.x"
+        - "3.x"
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: series
+    attributes:
+      label: Series key or raw source method
+      description: For example, `EU_DFR.RATE` or `ecb.get_deposit_rate`.
+      placeholder: "EU_DFR.RATE"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Describe what is wrong and why it matters.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest runnable example and the requested date window.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: Include the exact observation date and independent source for data mismatches.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result or traceback
+      description: Redact credentials and other sensitive values before pasting output.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I removed API keys, proxy credentials, and other secrets.
+          required: true

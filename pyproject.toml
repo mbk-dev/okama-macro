@@ -19,6 +19,15 @@ urllib3 = "*"
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
 ruff = "*"
+twine = "*"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "*"
+mkdocs-material = "*"
+mkdocstrings-python = "*"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

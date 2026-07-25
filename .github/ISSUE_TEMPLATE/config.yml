@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://mbk-dev.github.io/okama-macro/
+    about: Read the installation, API, and data-quality documentation.

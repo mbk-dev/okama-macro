@@ -3,9 +3,18 @@
 [![PyPI](https://img.shields.io/pypi/v/okama-macro.svg)](https://pypi.org/project/okama-macro/)
 [![Python](https://img.shields.io/pypi/pyversions/okama-macro.svg)](https://pypi.org/project/okama-macro/)
 [![CI](https://github.com/mbk-dev/okama-macro/actions/workflows/ci.yml/badge.svg)](https://github.com/mbk-dev/okama-macro/actions/workflows/ci.yml)
+[![Docs](https://github.com/mbk-dev/okama-macro/actions/workflows/docs.yml/badge.svg)](https://mbk-dev.github.io/okama-macro/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License](https://img.shields.io/pypi/l/okama-macro.svg)](https://pypi.org/project/okama-macro/)
 
 ![okama-macro — Macroeconomic data, normalized across borders](https://raw.githubusercontent.com/mbk-dev/okama-macro/main/docs/assets/okama-macro-hero.png)
+
+[Installation](#installation) ·
+[Quick start](#quick-start) ·
+[Available series](#available-series) ·
+[Data quality](#data-quality) ·
+[Documentation](https://mbk-dev.github.io/okama-macro/) ·
+[Contributing](#contributing)
 
 Normalized CPI inflation and central-bank rate series for Python, built for the
 [okama](https://github.com/mbk-dev/okama) project and available as a standalone
@@ -123,6 +132,22 @@ censtatd.get_composite_cpi()  # CPI index level, monthly
 | `PROXY_HOST`, `PROXY_PORT` | `bis`, `mospi`, `rbi` | Optional outbound HTTP proxy. |
 | `PROXY_USER`, `PROXY_PASS` | — | Optional proxy credentials. |
 
+## Data provenance and limitations
+
+- Public series are fetched from the publishers named in the table above and
+  normalized by `okama_macro.registry`; raw clients preserve source-native units
+  and shapes.
+- Publishers can revise historical observations, change endpoint behavior, or
+  publish on different schedules. Results therefore reflect the data available
+  from the upstream source at request time.
+- Historical depth and observation frequency are source-specific. Do not assume
+  that every country or rate has the same start date or update cadence.
+- Malformed and unexpectedly empty upstream responses fail loudly. The registry
+  does not silently replace one publisher with another unless composition is an
+  explicit, documented rule.
+- For audit-sensitive use, compare critical observations with the original
+  publisher and consult the recorded data-quality audits below.
+
 ## Data quality
 
 Material parser changes and newly consumed series are checked against independent
@@ -171,10 +196,10 @@ poetry build
 
 CI runs the suite and lint on Python 3.11, 3.12, 3.13 and 3.14. Keep executable
 changes covered by tests and do not commit `poetry.lock`; the full development
-conventions are documented in
-[`AGENTS.md`](https://github.com/mbk-dev/okama-macro/blob/main/AGENTS.md).
+workflow is documented in
+[`CONTRIBUTING.md`](https://github.com/mbk-dev/okama-macro/blob/main/CONTRIBUTING.md).
 
 ## License
 
 `okama-macro` is distributed under the
-[MIT License](https://spdx.org/licenses/MIT.html).
+[MIT License](https://github.com/mbk-dev/okama-macro/blob/main/LICENSE).

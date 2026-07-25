@@ -1,0 +1,75 @@
+name: Feature request
+description: Propose a new series, source client, or public API improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explain the user need first. New consumed series require a stable publisher and an independent comparison when a comparable source exists.
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: What problem would this change solve for callers?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request type
+      options:
+        - New public series
+        - New raw source client
+        - Public API improvement
+        - Documentation improvement
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: proposed_key
+    attributes:
+      label: Proposed series key
+      description: Complete this for a new public series.
+      placeholder: "COUNTRY_SERIES.TYPE"
+
+  - type: input
+    id: publisher
+    attributes:
+      label: Primary publisher
+      description: Link to the official source documentation or endpoint.
+      placeholder: "https://..."
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe units, frequency, dates, window semantics, and expected return shape.
+    validations:
+      required: true
+
+  - type: textarea
+    id: comparison
+    attributes:
+      label: Independent comparison source
+      description: Link a comparable mirror or explain why no direct comparison exists.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe current workarounds or other APIs considered.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for this request.
+          required: true
+        - label: I did not include API keys, credentials, or other secrets.
+          required: true
