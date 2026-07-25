@@ -1,20 +1,36 @@
 # okama-macro
 
-![okama-macro — Macroeconomic data, normalized across borders](docs/assets/okama-macro-hero.png)
+[![PyPI](https://img.shields.io/pypi/v/okama-macro.svg)](https://pypi.org/project/okama-macro/)
+[![Python](https://img.shields.io/pypi/pyversions/okama-macro.svg)](https://pypi.org/project/okama-macro/)
+[![CI](https://github.com/mbk-dev/okama-macro/actions/workflows/ci.yml/badge.svg)](https://github.com/mbk-dev/okama-macro/actions/workflows/ci.yml)
+[![License](https://img.shields.io/pypi/l/okama-macro.svg)](https://pypi.org/project/okama-macro/)
 
-Macro-economic data-source clients — CPI inflation and central-bank / policy
-rates — for the [okama](https://github.com/mbk-dev/okama) project.
+![okama-macro — Macroeconomic data, normalized across borders](https://raw.githubusercontent.com/mbk-dev/okama-macro/main/docs/assets/okama-macro-hero.png)
 
-One package, one HTTP/DataFrame layer, one dependency. It consolidates the macro
-source clients that used to live as separate per-source micro-repos and as
-in-repo modules of okama-API, behind a single unified series API. Rationale and
-migration history: [mbk-dev/okama-API#41](https://github.com/mbk-dev/okama-API/issues/41)
-and its ADR 0001.
+Normalized CPI inflation and central-bank rate series for Python, built for the
+[okama](https://github.com/mbk-dev/okama) project and available as a standalone
+package.
 
-## Install
+`okama-macro` consolidates official macroeconomic data clients behind one
+installable package, a shared HTTP/DataFrame layer, and a consistent public API.
+
+## Highlights
+
+- **One API** — discover series with `list_series()` and fetch them with `get()`.
+- **Consistent output** — every public series uses decimal fractions, an
+  ascending `DatetimeIndex`, float values, and a stable series name.
+- **Broad coverage** — CPI and policy-rate series across the United States,
+  Hong Kong, India, China, the United Kingdom, Israel, and the euro area.
+- **Raw-source access** — use the underlying clients when source-native units
+  and shapes are required.
+- **Source-aware transport** — shared retries, proxy support, secret redaction,
+  and compatibility handling for sources with specialized TLS or User-Agent
+  requirements.
+
+## Installation
 
 ```bash
-pip install okama-macro
+python -m pip install okama-macro
 ```
 
 Requires **Python ≥ 3.11**. Runs on both **pandas 2.x and 3.x**.
@@ -22,22 +38,30 @@ Requires **Python ≥ 3.11**. Runs on both **pandas 2.x and 3.x**.
 ## Quick start
 
 ```python
-import okama_macro
+from okama_macro import get, list_series
 
-okama_macro.list_series()
-# ['CHN_LPR1.RATE', 'CHN_LPR5.RATE', 'CNY.INFL', 'EU_DFR.RATE',
-#  'EU_MLR.RATE', 'EU_MRO.RATE', 'GBP.INFL', 'HKD.INFL', 'HK_BR.RATE',
-#  'ILS.INFL', 'IND_RBI.RATE', 'INR.INFL', 'ISR_IR.RATE', 'UK_BR.RATE',
-#  'USD.INFL', 'US_EFFR.RATE']
+# Discover the supported public keys.
+keys = list_series()
 
-# A rate as a decimal fraction (3.62% -> 0.0362), observations only:
-okama_macro.get('US_EFFR.RATE', first_date='2020-01-01')
+# Fetch a normalized rate series for a date window.
+deposit_rate = get(
+    "EU_DFR.RATE",
+    first_date="2024-01-01",
+    last_date="2024-12-31",
+)
 
 # Monthly m/m inflation as a decimal fraction:
-okama_macro.get('USD.INFL')
+us_inflation = get("USD.INFL", first_date="2024-01-01")
 ```
 
-## The contract
+Each `get()` call returns a `pandas.Series`. For example, a 3.62% rate is
+represented as `0.0362`, not `3.62`.
+
+> `USD.INFL` and `US_EFFR.RATE` require a
+> [FRED API key](https://fred.stlouisfed.org/docs/api/api_key.html) in the
+> `FRED_API_KEY` environment variable.
+
+## Data contract
 
 Every series returned by `get()` obeys the same contract, so callers never
 special-case a source:
@@ -76,7 +100,7 @@ special-case a source:
 | `EU_MLR.RATE` | ECB marginal lending facility rate | Euro area | `ecb` |
 | `EU_DFR.RATE` | ECB deposit facility rate | Euro area | `ecb` |
 
-## Raw per-source clients
+## Raw source clients
 
 Each source also exposes its raw client under `okama_macro.sources.*`, returning
 data **as the agency publishes it** (CPI index levels, rates in percent) — use
@@ -99,6 +123,19 @@ censtatd.get_composite_cpi()  # CPI index level, monthly
 | `PROXY_HOST`, `PROXY_PORT` | `bis`, `mospi`, `rbi` | Optional outbound HTTP proxy. |
 | `PROXY_USER`, `PROXY_PASS` | — | Optional proxy credentials. |
 
+## Data quality
+
+Material parser changes and newly consumed series are checked against independent
+sources when a comparable mirror exists. The recorded audits describe the
+comparison method, coverage, and known limitations:
+
+- [China CPI](https://github.com/mbk-dev/okama-macro/blob/main/docs/audits/nbsc-cny-infl.md)
+- [China Loan Prime Rates](https://github.com/mbk-dev/okama-macro/blob/main/docs/audits/cfets-chn-lpr.md)
+- [ECB key rates](https://github.com/mbk-dev/okama-macro/blob/main/docs/audits/ecb-eu-rates.md)
+- [Israel CPI and policy rate](https://github.com/mbk-dev/okama-macro/blob/main/docs/audits/boi-ils-isr.md)
+- [UK CPIH](https://github.com/mbk-dev/okama-macro/blob/main/docs/audits/ons-gbp-infl.md)
+- [UK Bank Rate](https://github.com/mbk-dev/okama-macro/blob/main/docs/audits/boe-uk-br.md)
+
 ## Architecture
 
 ```
@@ -115,17 +152,29 @@ okama_macro/
 Two layers: thin **sources** (data as published, on the shared `_http`) and a
 **registry** that normalises each key to the contract above.
 
-## Development
+The package replaces separate per-source clients and duplicated modules that
+previously lived across the okama ecosystem. The rationale and migration history
+are tracked in [mbk-dev/okama-API#41](https://github.com/mbk-dev/okama-API/issues/41).
+
+## Contributing
+
+Set up a local development checkout with Poetry:
 
 ```bash
+git clone https://github.com/mbk-dev/okama-macro.git
+cd okama-macro
 poetry install
-poetry run pytest        # test suite
-poetry run ruff check .  # lint (rules C, E, F, W, B)
+poetry run pytest -q
+poetry run ruff check .
+poetry build
 ```
 
-CI runs the suite and lint on Python 3.11, 3.12, 3.13 and 3.14. `poetry.lock` is
-intentionally untracked.
+CI runs the suite and lint on Python 3.11, 3.12, 3.13 and 3.14. Keep executable
+changes covered by tests and do not commit `poetry.lock`; the full development
+conventions are documented in
+[`AGENTS.md`](https://github.com/mbk-dev/okama-macro/blob/main/AGENTS.md).
 
 ## License
 
-MIT.
+`okama-macro` is distributed under the
+[MIT License](https://spdx.org/licenses/MIT.html).
