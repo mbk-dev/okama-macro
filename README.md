@@ -60,21 +60,21 @@ special-case a source:
 | Key | Series | Country | Source module |
 |-----|--------|---------|---------------|
 | `USD.INFL` | US CPI, m/m | United States | `fred` (FRED `CPIAUCNS`) |
-| `HKD.INFL` | Hong Kong Composite CPI, m/m | Hong Kong | `censtatd` (HK C&SD) |
-| `INR.INFL` | India General CPI, m/m | India | `mospi` (MOSPI) |
-| `CNY.INFL` | China CPI, m/m | China | `nbsc` (NBS China) |
-| `GBP.INFL` | UK CPIH, m/m | United Kingdom | `ons` (UK ONS) |
-| `ILS.INFL` | Israel CPI, m/m | Israel | `boi` (Bank of Israel) |
 | `US_EFFR.RATE` | US Federal Funds rate | United States | `fred` (FRED `DFF`) |
+| `HKD.INFL` | Hong Kong Composite CPI, m/m | Hong Kong | `censtatd` (HK C&SD) |
 | `HK_BR.RATE` | HKMA Discount Window Base Rate | Hong Kong | `hkma` |
+| `INR.INFL` | India General CPI, m/m | India | `mospi` (MOSPI) |
 | `IND_RBI.RATE` | RBI policy repo rate | India | `bis` (history) + `rbi` (same-day tail) |
+| `CNY.INFL` | China CPI, m/m | China | `nbsc` (NBS China) |
 | `CHN_LPR1.RATE` | China one-year Loan Prime Rate | China | `cfets` |
 | `CHN_LPR5.RATE` | China five-year Loan Prime Rate | China | `cfets` |
+| `GBP.INFL` | UK CPIH, m/m | United Kingdom | `ons` (UK ONS) |
+| `UK_BR.RATE` | Bank of England Bank Rate | United Kingdom | `boe` |
+| `ILS.INFL` | Israel CPI, m/m | Israel | `boi` (Bank of Israel) |
 | `ISR_IR.RATE` | Bank of Israel policy rate | Israel | `boi` |
 | `EU_MRO.RATE` | ECB main refinancing operations rate | Euro area | `ecb` |
 | `EU_MLR.RATE` | ECB marginal lending facility rate | Euro area | `ecb` |
 | `EU_DFR.RATE` | ECB deposit facility rate | Euro area | `ecb` |
-| `UK_BR.RATE` | Bank of England Bank Rate | United Kingdom | `boe` |
 
 ## Raw per-source clients
 
