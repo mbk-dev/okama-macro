@@ -1,5 +1,7 @@
 # okama-macro
 
+![okama-macro — Macroeconomic data, normalized across borders](docs/assets/okama-macro-hero.png)
+
 Macro-economic data-source clients — CPI inflation and central-bank / policy
 rates — for the [okama](https://github.com/mbk-dev/okama) project.
 
