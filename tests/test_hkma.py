@@ -2,6 +2,7 @@
 (okama_macro/sources/hkma.py)."""
 
 import pandas as pd
+import pytest
 
 from okama_macro import _http
 from okama_macro.sources import hkma
@@ -83,4 +84,44 @@ def test_get_base_rate_retries_on_502(monkeypatch):
     df = hkma.get_base_rate()
 
     assert calls["n"] == 2  # retried once, then succeeded
+    assert not df.empty
+
+
+def test_persistent_502_is_not_retried_twice_over(monkeypatch):
+    calls = {"n": 0}
+
+    def always_502(url, params=None, timeout=None, headers=None, **kwargs):
+        calls["n"] += 1
+        return FakeResponse(status_code=502, text="<html>502</html>")
+
+    monkeypatch.setattr(_http.requests, "get", always_502)
+    monkeypatch.setattr(_http.time, "sleep", lambda *a: None)
+    monkeypatch.setattr(hkma.time, "sleep", lambda *a: None)
+
+    with pytest.raises(RuntimeError):
+        hkma.get_base_rate()
+
+    # Transport retries belong to _http.get alone. The outer payload loop must not
+    # multiply them: 4 x 4 = 16 requests means ~32 min on one symbol at
+    # API_TIMEOUT=120 when the upstream hangs rather than refuses.
+    assert calls["n"] == hkma._MAX_ATTEMPTS
+
+
+def test_payload_error_is_still_retried(monkeypatch):
+    calls = {"n": 0}
+
+    def flaky_payload(url, params=None, timeout=None, headers=None, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            # HTTP 200 carrying an error header — what the outer loop is for.
+            return FakeResponse(_payload(RECORDS, ok=False))
+        return FakeResponse(_payload(RECORDS))
+
+    monkeypatch.setattr(_http.requests, "get", flaky_payload)
+    monkeypatch.setattr(_http.time, "sleep", lambda *a: None)
+    monkeypatch.setattr(hkma.time, "sleep", lambda *a: None)
+
+    df = hkma.get_base_rate()
+
+    assert calls["n"] == 2
     assert not df.empty

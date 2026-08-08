@@ -33,11 +33,18 @@ _MAX_ATTEMPTS = 4  # HKMA's ALB 502s intermittently; retry transient failures
 _RETRY_BACKOFF_SECONDS = 2.0
 
 
+class _PayloadError(RuntimeError):
+    """An HTTP 200 carrying an HKMA error header (``success: false``)."""
+
+
 def _get_records(pagesize: int) -> list[dict]:
     """One HKMA request (latest ``pagesize`` daily rows), retried on failure.
 
     Transient 5xx retries happen inside ``_http.get``; this outer loop retries
-    payload-level surprises (malformed JSON, ``success: false`` headers).
+    payload-level surprises (malformed JSON, ``success: false`` headers) only.
+    It must not catch ``_http.get``'s own ``RuntimeError``, or the two loops
+    multiply: ``_MAX_ATTEMPTS`` squared requests, and up to ~32 min spent on one
+    symbol at ``API_TIMEOUT`` when the upstream hangs instead of refusing.
     """
     params = {'pagesize': pagesize, 'sortby': 'end_of_date', 'sortorder': 'desc'}
     for attempt in range(_MAX_ATTEMPTS):
@@ -48,9 +55,9 @@ def _get_records(pagesize: int) -> list[dict]:
                                  label='HKMA API request')
             payload = response.json()
             if not payload['header']['success']:
-                raise RuntimeError(f'HKMA API error: {payload["header"]["err_msg"]}')
+                raise _PayloadError(f'HKMA API error: {payload["header"]["err_msg"]}')
             return payload['result']['records']
-        except (ValueError, KeyError, RuntimeError) as error:
+        except (ValueError, KeyError, _PayloadError) as error:
             if attempt < _MAX_ATTEMPTS - 1:
                 info_logger.warning(
                     f'HKMA API attempt {attempt + 1}/{_MAX_ATTEMPTS} failed '
