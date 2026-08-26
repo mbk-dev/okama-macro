@@ -31,13 +31,21 @@ _MAX_PAGESIZE = 8000  # covers the full 2002-> daily history in one request
 API_TIMEOUT = 120  # seconds — the full-history payload is large
 _MAX_ATTEMPTS = 4  # HKMA's ALB 502s intermittently; retry transient failures
 _RETRY_BACKOFF_SECONDS = 2.0
+_INCREMENTAL_MAX_ATTEMPTS = 2
+_INCREMENTAL_TIMEOUT = 30
+_LATEST_TIMEOUT = 15
 
 
 class _PayloadError(RuntimeError):
     """An HTTP 200 carrying an HKMA error header (``success: false``)."""
 
 
-def _get_records(pagesize: int) -> list[dict]:
+def _get_records(
+        pagesize: int,
+        *,
+        max_attempts: int = _MAX_ATTEMPTS,
+        timeout: int = API_TIMEOUT,
+) -> list[dict]:
     """One HKMA request (latest ``pagesize`` daily rows), retried on failure.
 
     Transient 5xx retries happen inside ``_http.get``; this outer loop retries
@@ -47,10 +55,10 @@ def _get_records(pagesize: int) -> list[dict]:
     symbol at ``API_TIMEOUT`` when the upstream hangs instead of refusing.
     """
     params = {'pagesize': pagesize, 'sortby': 'end_of_date', 'sortorder': 'desc'}
-    for attempt in range(_MAX_ATTEMPTS):
+    for attempt in range(max_attempts):
         try:
-            response = _http.get(BASE_URL, params=params, timeout=API_TIMEOUT,
-                                 max_attempts=_MAX_ATTEMPTS,
+            response = _http.get(BASE_URL, params=params, timeout=timeout,
+                                 max_attempts=max_attempts,
                                  backoff=_RETRY_BACKOFF_SECONDS,
                                  label='HKMA API request')
             payload = response.json()
@@ -58,9 +66,9 @@ def _get_records(pagesize: int) -> list[dict]:
                 raise _PayloadError(f'HKMA API error: {payload["header"]["err_msg"]}')
             return payload['result']['records']
         except (ValueError, KeyError, _PayloadError) as error:
-            if attempt < _MAX_ATTEMPTS - 1:
+            if attempt < max_attempts - 1:
                 info_logger.warning(
-                    f'HKMA API attempt {attempt + 1}/{_MAX_ATTEMPTS} failed '
+                    f'HKMA API attempt {attempt + 1}/{max_attempts} failed '
                     f'({type(error).__name__}); retrying'
                 )
                 time.sleep(_RETRY_BACKOFF_SECONDS * (attempt + 1))
@@ -86,7 +94,23 @@ def get_base_rate(
     else:
         pagesize = _MAX_PAGESIZE
     info_logger.info(f'Loading HKMA base rate (pagesize={pagesize})')
-    records = _get_records(pagesize)
+    incremental = pagesize < _MAX_PAGESIZE
+    try:
+        records = _get_records(
+            pagesize,
+            max_attempts=(
+                _INCREMENTAL_MAX_ATTEMPTS if incremental else _MAX_ATTEMPTS
+            ),
+            timeout=_INCREMENTAL_TIMEOUT if incremental else API_TIMEOUT,
+        )
+    except RuntimeError as error:
+        if pagesize == 1:
+            raise
+        info_logger.warning(
+            f'HKMA bulk request for {pagesize} rows failed '
+            f'({type(error).__name__}); falling back to the latest row'
+        )
+        records = _get_records(1, max_attempts=1, timeout=_LATEST_TIMEOUT)
     rows = [(r['end_of_date'], r[_FIELD]) for r in records if r.get(_FIELD) is not None]
     df = pd.DataFrame(rows, columns=['DATE', _FIELD])
     df['DATE'] = pd.to_datetime(df['DATE'])

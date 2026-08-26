@@ -87,6 +87,28 @@ def test_get_base_rate_retries_on_502(monkeypatch):
     assert not df.empty
 
 
+def test_get_base_rate_falls_back_to_latest_record_after_bulk_502s(monkeypatch):
+    calls = []
+
+    def bulk_fails(url, params=None, timeout=None, headers=None, **kwargs):
+        calls.append(params["pagesize"])
+        if params["pagesize"] > 1:
+            return FakeResponse(status_code=502, text="<html>502</html>")
+        return FakeResponse(_payload(RECORDS[:1]))
+
+    monkeypatch.setattr(_http.requests, "get", bulk_fails)
+    monkeypatch.setattr(_http.time, "sleep", lambda *a: None)
+
+    df = hkma.get_base_rate(first_date=pd.Timestamp("2026-07-01"))
+
+    assert len(calls) == 3
+    assert len(set(calls[:-1])) == 1
+    assert calls[0] > 1
+    assert calls[-1] == 1
+    assert list(df.index) == [pd.Timestamp("2026-07-10")]
+    assert df["disc_win_base_rate"].iat[0] == 4
+
+
 def test_persistent_502_is_not_retried_twice_over(monkeypatch):
     calls = {"n": 0}
 
@@ -101,10 +123,9 @@ def test_persistent_502_is_not_retried_twice_over(monkeypatch):
     with pytest.raises(RuntimeError):
         hkma.get_base_rate()
 
-    # Transport retries belong to _http.get alone. The outer payload loop must not
-    # multiply them: 4 x 4 = 16 requests means ~32 min on one symbol at
-    # API_TIMEOUT=120 when the upstream hangs rather than refuses.
-    assert calls["n"] == hkma._MAX_ATTEMPTS
+    # Transport retries belong to _http.get alone. A full-history request gets
+    # four attempts, followed by one bounded latest-row fallback — never 4 x 4.
+    assert calls["n"] == hkma._MAX_ATTEMPTS + 1
 
 
 def test_payload_error_is_still_retried(monkeypatch):
