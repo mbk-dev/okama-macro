@@ -30,6 +30,10 @@ _FIELD = 'disc_win_base_rate'
 _MAX_PAGESIZE = 8000  # covers the full 2002-> daily history in one request
 API_TIMEOUT = 120  # seconds — the full-history payload is large
 _MAX_ATTEMPTS = 4  # HKMA's ALB 502s intermittently; retry transient failures
+# Since `_http.get` retries transport errors too, the bulk path is bounded by
+# _MAX_ATTEMPTS * API_TIMEOUT (~8 min) when HKMA's WAF accepts the request and
+# answers with nothing. That budget belongs to the deliberate full-history
+# rebuild only; the nightly incremental path below stays under ~80 s.
 _RETRY_BACKOFF_SECONDS = 2.0
 _INCREMENTAL_MAX_ATTEMPTS = 2
 _INCREMENTAL_TIMEOUT = 30

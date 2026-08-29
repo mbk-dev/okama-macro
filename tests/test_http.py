@@ -185,3 +185,58 @@ def test_legacy_tls_session_picks_up_env_proxy(monkeypatch):
 
     assert session.proxies == {'http': 'http://127.0.0.1:3128',
                                'https': 'http://127.0.0.1:3128'}
+
+
+def test_retries_read_timeout_then_succeeds(monkeypatch):
+    """A read timeout carries no response but is transient — retry it.
+
+    HKMA's WAF intermittently accepts the request and returns nothing at all;
+    the nightly rates run then spent one full timeout and failed the symbol.
+    """
+    calls = []
+    responses = [requests.ReadTimeout('Read timed out. (read timeout=30)'),
+                 FakeResponse(200)]
+
+    def fake_get(url, **kwargs):
+        calls.append(1)
+        outcome = responses[len(calls) - 1]
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(_http.requests, 'get', fake_get)
+
+    response = _http.get('https://example.org')
+
+    assert len(calls) == 2
+    assert response.status_code == 200
+
+
+def test_persistent_read_timeout_raises_after_max_attempts(monkeypatch):
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(1)
+        raise requests.ReadTimeout('Read timed out. (read timeout=30)')
+
+    monkeypatch.setattr(_http.requests, 'get', fake_get)
+
+    with pytest.raises(RuntimeError, match='my-source failed'):
+        _http.get('https://example.org', max_attempts=3, label='my-source')
+
+    assert len(calls) == 3
+
+
+def test_retries_connection_error_then_succeeds(monkeypatch):
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise requests.ConnectionError('connection reset by peer')
+        return FakeResponse(200)
+
+    monkeypatch.setattr(_http.requests, 'get', fake_get)
+
+    assert _http.get('https://example.org').status_code == 200
+    assert len(calls) == 2

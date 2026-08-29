@@ -3,10 +3,13 @@
 ``get()`` is a plain GET with a browser-like User-Agent (several statistical
 agencies reject the default python-requests UA), an optional outbound proxy
 taken from the ``PROXY_*`` environment variables, and linear-back-off retries
-on transient upstream 5xx responses. 4xx responses and hard connection errors
-fail fast. On failure it raises ``RuntimeError`` with the ``redact`` strings
-masked so API keys never leak into logs. ``legacy_tls_session()`` (Task 3)
-serves endpoints that need OpenSSL legacy server renegotiation.
+on transient failures: upstream 5xx responses *and* transport errors (timeouts,
+dropped connections), which a WAF in front of an agency's API produces just as
+readily as a 5xx. 4xx responses fail fast — they are the caller's mistake, and
+repeating them cannot help. On failure it raises ``RuntimeError`` with the
+``redact`` strings masked so API keys never leak into logs.
+``legacy_tls_session()`` (Task 3) serves endpoints that need OpenSSL legacy
+server renegotiation.
 """
 
 import logging
@@ -23,6 +26,10 @@ info_logger = logging.getLogger('okama_macro.http')
 
 DEFAULT_TIMEOUT = 60  # seconds
 USER_AGENT = 'Mozilla/5.0 (okama-data pipeline)'
+
+# Transport failures worth another attempt. They arrive with no ``response``
+# attached, which is exactly what tells them apart from an HTTP status error.
+TRANSIENT_TRANSPORT_ERRORS = (requests.Timeout, requests.ConnectionError)
 
 
 def proxies_from_env() -> dict[str, str] | None:
@@ -73,10 +80,16 @@ def get(url: str,
         use_proxy: bool = False,
         redact: tuple[str, ...] = (),
         label: str = 'request') -> requests.Response:
-    """GET ``url`` with UA/proxy defaults and linear-back-off retries on 5xx.
+    """GET ``url`` with UA/proxy defaults, retrying transient upstream failures.
 
     Caller-supplied ``headers`` are merged over the defaults, so an explicit
     ``User-Agent`` from the caller wins.
+
+    Retried: 5xx responses and the transport errors in
+    ``TRANSIENT_TRANSPORT_ERRORS``. Every attempt is capped by ``timeout``, so
+    the call is bounded by ``max_attempts * timeout`` plus the back-off sleeps —
+    size those two for the payload, because a hung upstream now costs the whole
+    budget instead of a single timeout.
     """
     merged_headers = {'User-Agent': USER_AGENT} | (headers or {})
     proxies = proxies_from_env() if use_proxy else None
@@ -88,10 +101,15 @@ def get(url: str,
             return response
         except requests.RequestException as error:
             resp = getattr(error, 'response', None)
-            transient = resp is not None and resp.status_code >= 500
+            if resp is not None:
+                transient = resp.status_code >= 500
+                reason = f'HTTP {resp.status_code}'
+            else:
+                transient = isinstance(error, TRANSIENT_TRANSPORT_ERRORS)
+                reason = type(error).__name__
             if transient and attempt < max_attempts - 1:
                 info_logger.warning(
-                    f'{label}: HTTP {resp.status_code}; '
+                    f'{label}: {reason}; '
                     f'retry {attempt + 1}/{max_attempts - 1}'
                 )
                 time.sleep(backoff * (attempt + 1))
