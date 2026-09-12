@@ -57,6 +57,37 @@ def _row2024(division='CPI (General)', group=None, index='100.0'):
             'index': index, 'inflation': None, 'imputation': None}
 
 
+def test_fetch_base_2012_uses_mospi_limit_and_continues_to_next_page():
+    """MOSPI rejects limits above 200, but its CPI history spans pages."""
+    dates = pd.date_range('2010-01-01', periods=201, freq='MS')
+    pages = {
+        '1': {'data': [_row2012(date.year, date.strftime('%B'), index=str(i))
+                       for i, date in enumerate(dates[:200], start=100)]},
+        '2': {'data': [_row2012(dates[-1].year, dates[-1].strftime('%B'),
+                                index='300.0')]},
+        '3': {'data': []},
+    }
+
+    class LimitEnforcingSession:
+        def __init__(self):
+            self.pages: list[str] = []
+
+        def get(self, url, params=None, timeout=None, **kwargs):
+            assert url == mospi.CPI_INDEX_URL
+            assert int(params['limit']) <= 200
+            self.pages.append(params['page'])
+            return FakeResponse(pages[params['page']])
+
+    session = LimitEnforcingSession()
+
+    series = mospi._fetch_base_2012(session)
+
+    assert len(series) == 201
+    assert series.index[0] == pd.Timestamp('2010-01-01')
+    assert series.index[-1] == pd.Timestamp('2026-09-01')
+    assert session.pages == ['1', '2', '3']
+
+
 # ---------------------------------------------------------------------------
 # _splice — pure function, no wall-clock coupling
 # ---------------------------------------------------------------------------

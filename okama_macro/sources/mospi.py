@@ -49,7 +49,7 @@ info_logger = logging.getLogger('okama_macro.mospi')
 CPI_INDEX_URL = 'https://api.mospi.gov.in/api/cpi/getCPIIndex'  # base 2012 (frozen)
 CPI_DATA_URL = 'https://api.mospi.gov.in/api/cpi/getCPIData'    # base 2024 (live)
 API_TIMEOUT = 60  # seconds
-_PAGE_SIZE = 500
+_PAGE_SIZE = 200
 # getCPIData caps limit at 100 and returns only the latest month unless
 # constrained; we query one month at a time so a small page suffices.
 _DATA_PAGE_SIZE = 100

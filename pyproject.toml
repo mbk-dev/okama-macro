@@ -1,6 +1,6 @@
 [project]
 name = "okama-macro"
-version = "0.1.2"
+version = "0.1.3"
 description = "Macro-economic data-source clients (CPI, central-bank rates) for the okama project"
 authors = [{ name = "mbk-dev" }]
 license = "MIT"
