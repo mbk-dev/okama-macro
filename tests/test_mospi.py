@@ -57,7 +57,7 @@ def _row2024(division='CPI (General)', group=None, index='100.0'):
             'index': index, 'inflation': None, 'imputation': None}
 
 
-def test_fetch_base_2012_uses_mospi_limit_and_continues_to_next_page():
+def test_fetch_base_2012_uses_mospi_limit_and_continues_to_next_page() -> None:
     """MOSPI rejects limits above 200, but its CPI history spans pages."""
     dates = pd.date_range('2010-01-01', periods=201, freq='MS')
     pages = {
@@ -69,10 +69,14 @@ def test_fetch_base_2012_uses_mospi_limit_and_continues_to_next_page():
     }
 
     class LimitEnforcingSession:
-        def __init__(self):
+        def __init__(self) -> None:
             self.pages: list[str] = []
 
-        def get(self, url, params=None, timeout=None, **kwargs):
+        def get(
+            self, url: str, params: dict[str, str] | None = None,
+            timeout: int | None = None, **kwargs: object,
+        ) -> FakeResponse:
+            assert params is not None
             assert url == mospi.CPI_INDEX_URL
             assert int(params['limit']) <= 200
             self.pages.append(params['page'])
