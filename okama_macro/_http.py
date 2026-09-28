@@ -32,19 +32,23 @@ USER_AGENT = 'Mozilla/5.0 (okama-data pipeline)'
 TRANSIENT_TRANSPORT_ERRORS = (requests.Timeout, requests.ConnectionError)
 
 
-def proxies_from_env() -> dict[str, str] | None:
+def proxies_from_env(url: str | None = None) -> dict[str, str] | None:
     """Build the requests proxies dict from PROXY_* env vars, or None if unset.
 
     Foreign sources go through the local HAProxy on the production server;
-    without the env vars (e.g. in tests) requests go direct.
+    without the env vars (e.g. in tests) requests go direct. With ``url``, a host
+    listed in the ``no_proxy`` env var gets None: requests applies an explicit
+    ``proxies=`` mapping without consulting ``no_proxy`` itself.
     """
     host, port = os.getenv('PROXY_HOST'), os.getenv('PROXY_PORT')
     if not (host and port):
         return None
+    if url is not None and requests.utils.should_bypass_proxies(url, no_proxy=None):
+        return None
     user, password = os.getenv('PROXY_USER'), os.getenv('PROXY_PASS')
     auth = f'{user}:{password}@' if user and password else ''
-    url = f'http://{auth}{host}:{port}'
-    return {'http': url, 'https': url}
+    proxy_url = f'http://{auth}{host}:{port}'
+    return {'http': proxy_url, 'https': proxy_url}
 
 
 class _LegacyRenegotiationAdapter(HTTPAdapter):
@@ -95,7 +99,7 @@ def get(url: str,
     budget instead of a single timeout.
     """
     merged_headers = {'User-Agent': USER_AGENT} | (headers or {})
-    proxies = proxies_from_env() if use_proxy else None
+    proxies = proxies_from_env(url) if use_proxy else None
     send = session.get if session is not None else requests.get
     for attempt in range(max_attempts):
         try:
@@ -130,8 +134,8 @@ def legacy_tls_session() -> requests.Session:
     """A Session for endpoints needing legacy TLS renegotiation (MOSPI).
 
     Verification is disabled (the endpoint presents a chain OpenSSL rejects) —
-    the same workaround as MOSPI's own reference client. UA and env proxies
-    are preset.
+    the same workaround as MOSPI's own reference client. The UA is preset;
+    the proxy is chosen per request by ``get(..., use_proxy=True)``.
     """
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     ssl_context = ssl.create_default_context()
@@ -143,7 +147,6 @@ def legacy_tls_session() -> requests.Session:
     session.headers.update({'User-Agent': USER_AGENT})
     session.verify = False
     session.mount('https://', _LegacyRenegotiationAdapter(ssl_context))
-    proxies = proxies_from_env()
-    if proxies:
-        session.proxies = proxies
+    # No session-wide proxy: it would override no_proxy for every URL. Callers
+    # pass ``use_proxy=True`` to ``get()``, which resolves the proxy per URL.
     return session

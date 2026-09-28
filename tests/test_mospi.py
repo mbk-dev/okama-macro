@@ -280,3 +280,18 @@ def test_persistent_timeout_fails_after_bounded_attempts(monkeypatch):
     with pytest.raises(RuntimeError, match='MOSPI'):
         mospi._fetch_base_2024(session, start=pd.Timestamp('2026-01-01'))
     assert len(session.calls) == 3
+
+
+def test_mospi_requests_ask_for_the_env_proxy(monkeypatch):
+    """MOSPI opts into PROXY_* per request, so no_proxy can exempt it."""
+    seen = {}
+
+    def fake_get(url, **kwargs):
+        seen.update(kwargs)
+        return FakeResponse({'data': []})
+
+    monkeypatch.setattr(mospi._http, 'get', fake_get)
+
+    mospi._get(object(), mospi.CPI_DATA_URL, {})
+
+    assert seen['use_proxy'] is True

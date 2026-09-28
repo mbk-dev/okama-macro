@@ -33,9 +33,9 @@ Two MOSPI-specific quirks, both handled here:
 * **No key.** The endpoint is keyless (the swagger's Bearer scheme is optional and
   the reference client sends none).
 
-Foreign-source proxying is handled by ``_http.legacy_tls_session()``: the request
+Proxying is chosen per request by ``_http.get(..., use_proxy=True)``: the request
 goes through the local HAProxy on the production server when ``PROXY_*`` env vars
-are set, else direct (e.g. tests).
+are set and the host is not listed in ``no_proxy``, else direct (e.g. tests).
 """
 
 import logging
@@ -91,7 +91,7 @@ def _get(session, url: str, params: dict):
     ``session.get`` turned that one stall into a failed nightly INR.INFL update.
     """
     return _http.get(url, params=params, timeout=API_TIMEOUT, session=session,
-                     label='MOSPI CPI request')
+                     use_proxy=True, label='MOSPI CPI request')
 
 
 def _fetch_base_2012(session) -> pd.Series:

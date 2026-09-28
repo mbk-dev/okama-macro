@@ -175,16 +175,47 @@ def test_legacy_adapter_injects_ssl_context_into_proxy_manager():
     assert proxy_manager.connection_pool_kw.get('ssl_context') is ctx
 
 
-def test_legacy_tls_session_picks_up_env_proxy(monkeypatch):
+def test_legacy_tls_session_leaves_proxy_choice_to_each_request(monkeypatch):
+    """A proxy pinned on the session would override no_proxy for every URL."""
+    monkeypatch.setenv('PROXY_HOST', '127.0.0.1')
+    monkeypatch.setenv('PROXY_PORT', '3128')
+
+    session = _http.legacy_tls_session()
+
+    assert session.proxies == {}
+
+
+def _env_proxy(monkeypatch, no_proxy: str) -> None:
     monkeypatch.setenv('PROXY_HOST', '127.0.0.1')
     monkeypatch.setenv('PROXY_PORT', '3128')
     monkeypatch.delenv('PROXY_USER', raising=False)
     monkeypatch.delenv('PROXY_PASS', raising=False)
+    for name in ('no_proxy', 'NO_PROXY'):
+        monkeypatch.setenv(name, no_proxy)
 
-    session = _http.legacy_tls_session()
 
-    assert session.proxies == {'http': 'http://127.0.0.1:3128',
-                               'https': 'http://127.0.0.1:3128'}
+def test_use_proxy_honours_no_proxy_for_listed_host(monkeypatch):
+    """Explicit proxies bypass requests' own no_proxy check, so get() applies it."""
+    _env_proxy(monkeypatch, 'localhost,.ru,api.mospi.gov.in')
+    captured = {}
+    monkeypatch.setattr(_http.requests, 'get',
+                        lambda url, **kw: captured.update(kw) or FakeResponse())
+
+    _http.get('https://api.mospi.gov.in/api/cpi/getCPIData', use_proxy=True)
+
+    assert captured['proxies'] is None
+
+
+def test_use_proxy_still_proxies_unlisted_host(monkeypatch):
+    _env_proxy(monkeypatch, 'localhost,.ru,api.mospi.gov.in')
+    captured = {}
+    monkeypatch.setattr(_http.requests, 'get',
+                        lambda url, **kw: captured.update(kw) or FakeResponse())
+
+    _http.get('https://www.bis.org/api', use_proxy=True)
+
+    assert captured['proxies'] == {'http': 'http://127.0.0.1:3128',
+                                   'https': 'http://127.0.0.1:3128'}
 
 
 def test_retries_read_timeout_then_succeeds(monkeypatch):
