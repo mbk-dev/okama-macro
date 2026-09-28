@@ -240,3 +240,24 @@ def test_retries_connection_error_then_succeeds(monkeypatch):
 
     assert _http.get('https://example.org').status_code == 200
     assert len(calls) == 2
+
+
+def test_get_uses_given_session_and_retries_transport_errors(monkeypatch):
+    monkeypatch.setattr(_http.requests, 'get',
+                        lambda *a, **k: pytest.fail('module-level requests.get used'))
+    outcomes = [requests.ReadTimeout('stalled'), FakeResponse(200)]
+    calls = []
+
+    class Session:
+        def get(self, url, **kwargs):
+            calls.append(kwargs)
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+
+    resp = _http.get('https://x.test', session=Session(), timeout=7)
+
+    assert resp.status_code == 200
+    assert len(calls) == 2
+    assert calls[0]['timeout'] == 7

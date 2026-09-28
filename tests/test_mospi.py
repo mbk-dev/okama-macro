@@ -3,6 +3,7 @@
 
 import pandas as pd
 import pytest
+import requests
 
 from okama_macro.sources import mospi
 
@@ -233,3 +234,49 @@ def test_get_general_cpi_raises_when_series_is_stale():
 
     with pytest.raises(RuntimeError, match='stale'):
         mospi.get_general_cpi(session=session)
+
+
+class FlakySession(FakeSession):
+    """Times out on the first ``timeouts`` requests, then behaves like FakeSession."""
+
+    def __init__(self, timeouts: int, **kwargs):
+        super().__init__(**kwargs)
+        self._timeouts = timeouts
+
+    def get(self, url, params=None, timeout=None, **kwargs):
+        if self._timeouts:
+            self._timeouts -= 1
+            self.calls.append((url, params or {}))
+            raise requests.ReadTimeout('Read timed out. (read timeout=60)')
+        return super().get(url, params=params, timeout=timeout, **kwargs)
+
+
+def test_fetch_base_2024_retries_a_read_timeout(monkeypatch):
+    """A single stalled MOSPI response must not fail the whole INR.INFL update."""
+    monkeypatch.setattr(mospi._http.time, 'sleep', lambda *a: None)
+    data = {(2026, 1): [_row2024(index='101.0')]}
+    session = FlakySession(timeouts=1, data_by_month=data)
+
+    s = mospi._fetch_base_2024(session, start=pd.Timestamp('2026-01-01'))
+
+    assert s.tolist() == [101.0]
+    assert [params['month_code'] for _, params in session.calls[:2]] == ['1', '1']
+
+
+def test_fetch_base_2012_retries_a_read_timeout(monkeypatch):
+    monkeypatch.setattr(mospi._http.time, 'sleep', lambda *a: None)
+    page = {'data': [_row2012(2025, 'December', index='200.0')]}
+    session = FlakySession(timeouts=1, index_pages=[page])
+
+    s = mospi._fetch_base_2012(session)
+
+    assert s.tolist() == [200.0]
+
+
+def test_persistent_timeout_fails_after_bounded_attempts(monkeypatch):
+    monkeypatch.setattr(mospi._http.time, 'sleep', lambda *a: None)
+    session = FlakySession(timeouts=99)
+
+    with pytest.raises(RuntimeError, match='MOSPI'):
+        mospi._fetch_base_2024(session, start=pd.Timestamp('2026-01-01'))
+    assert len(session.calls) == 3

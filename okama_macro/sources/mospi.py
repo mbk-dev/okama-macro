@@ -84,14 +84,23 @@ _GENERAL_PARAMS_2024 = {
 }
 
 
+def _get(session, url: str, params: dict):
+    """One MOSPI request through the shared retry policy.
+
+    MOSPI intermittently stalls a single response past ``API_TIMEOUT``; a bare
+    ``session.get`` turned that one stall into a failed nightly INR.INFL update.
+    """
+    return _http.get(url, params=params, timeout=API_TIMEOUT, session=session,
+                     label='MOSPI CPI request')
+
+
 def _fetch_base_2012(session) -> pd.Series:
     """The frozen base-2012 General All-India Combined index (2013-01 → 2025-12)."""
     records: list[dict] = []
     page = 1
     while True:
         params = {**_GENERAL_PARAMS_2012, 'limit': str(_PAGE_SIZE), 'page': str(page)}
-        response = session.get(CPI_INDEX_URL, params=params, timeout=API_TIMEOUT)
-        response.raise_for_status()
+        response = _get(session, CPI_INDEX_URL, params)
         data = response.json().get('data') or []
         if not data:
             break
@@ -123,8 +132,7 @@ def _fetch_base_2024(session, start: pd.Timestamp) -> pd.Series:
     while cur <= horizon:
         params = {**_GENERAL_PARAMS_2024,
                   'year': str(cur.year), 'month_code': str(cur.month)}
-        response = session.get(CPI_DATA_URL, params=params, timeout=API_TIMEOUT)
-        response.raise_for_status()
+        response = _get(session, CPI_DATA_URL, params)
         data = response.json().get('data') or []
         row = next((r for r in data
                     if r.get('division') == 'CPI (General)' and r.get('group') is None),

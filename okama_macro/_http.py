@@ -79,11 +79,14 @@ def get(url: str,
         backoff: float = 1.0,
         use_proxy: bool = False,
         redact: tuple[str, ...] = (),
-        label: str = 'request') -> requests.Response:
+        label: str = 'request',
+        session: requests.Session | None = None) -> requests.Response:
     """GET ``url`` with UA/proxy defaults, retrying transient upstream failures.
 
     Caller-supplied ``headers`` are merged over the defaults, so an explicit
-    ``User-Agent`` from the caller wins.
+    ``User-Agent`` from the caller wins. A ``session`` (e.g.
+    ``legacy_tls_session()``) sends every attempt through its adapters and
+    proxies instead of the module-level ``requests.get``.
 
     Retried: 5xx responses and the transport errors in
     ``TRANSIENT_TRANSPORT_ERRORS``. Every attempt is capped by ``timeout``, so
@@ -93,10 +96,11 @@ def get(url: str,
     """
     merged_headers = {'User-Agent': USER_AGENT} | (headers or {})
     proxies = proxies_from_env() if use_proxy else None
+    send = session.get if session is not None else requests.get
     for attempt in range(max_attempts):
         try:
-            response = requests.get(url, params=params, headers=merged_headers,
-                                    timeout=timeout, proxies=proxies)
+            response = send(url, params=params, headers=merged_headers,
+                            timeout=timeout, proxies=proxies)
             response.raise_for_status()
             return response
         except requests.RequestException as error:
