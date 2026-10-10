@@ -214,7 +214,6 @@ Tools for investing and financial planning.
 | [okama.io](https://okama.io/) | Explore portfolios with interactive web tools. |
 | [okama](https://github.com/mbk-dev/okama) | Analyze investments and portfolios in Python. |
 | [okama Data API](https://api.okama.io/) | Access historical market and economic data. |
-| [okama-macro](https://github.com/mbk-dev/okama-macro) | Work with inflation and central-bank rate series. |
 | [okama-mcp](https://mcp.okama.io/) | Use okama tools through an AI assistant. |
 | [okama Planner](https://github.com/mbk-dev/okama-planner) | Build financial plans and manage client planning history. |
 
